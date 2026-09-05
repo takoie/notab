@@ -4,9 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:web": "concurrently -n convex,vite -c blue,green \"npx convex dev\" \"npm run dev\"",
-    "dev:desktop": "concurrently -n convex,tauri -c blue,magenta \"npx convex dev\" \"npm run tauri dev\"",
+    "dev": "concurrently -k -n convex,app -c blue,magenta \"npx convex dev\" \"npm run tauri dev\"",
+    "dev:vite": "vite",
+    "dev:web": "concurrently -k -n convex,vite -c blue,green \"npx convex dev\" \"npm run dev:vite\"",
+    "dev:desktop": "npm run dev",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
