@@ -27,9 +27,6 @@
   <div class="grid flex-1 place-items-center px-6 py-16 text-center">
     <div class="max-w-xs space-y-1">
       <p class="text-[13px] font-medium text-ink-soft">Ingen notater ennå</p>
-      <p class="text-[12px] text-ink-faint">
-        Skriv ned det du vil huske til du er hjemme og har tilgang igjen.
-      </p>
     </div>
   </div>
 {:else if manual}
