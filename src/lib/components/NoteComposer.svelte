@@ -6,6 +6,14 @@
   let value = $state('');
   let input = $state<HTMLInputElement | null>(null);
 
+  // autofocus the field right after a new tab is created
+  $effect(() => {
+    if (input && notab.focusComposerFor === tabId) {
+      input.focus();
+      notab.focusComposerFor = null;
+    }
+  });
+
   async function submit() {
     const text = value.trim();
     if (!text) return;

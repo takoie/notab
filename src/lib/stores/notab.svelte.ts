@@ -53,6 +53,8 @@ class NotabStore {
   notes = $state<Note[]>([]);
   loaded = $state(false);
   activeTabId = $state<string | null>(null);
+  /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
+  focusComposerFor = $state<string | null>(null);
 
   #byId = new Map<string, Note>();
 
@@ -153,6 +155,7 @@ class NotabStore {
     const tab = freshTab(name, orderKeyAfter(lastKey));
     await this.#commitTab(tab);
     this.activeTabId = tab.id;
+    this.focusComposerFor = tab.id;
     return tab;
   }
 
