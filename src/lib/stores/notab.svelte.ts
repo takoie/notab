@@ -204,7 +204,11 @@ class NotabStore {
 
   /* ---------------- note commands ---------------- */
 
-  async addNote(tabId: string, title: string): Promise<Note | null> {
+  async addNote(
+    tabId: string,
+    title: string,
+    opts: { dueDate?: number | null; importance?: Importance } = {},
+  ): Promise<Note | null> {
     const trimmed = title.trim();
     if (!trimmed) return null;
     const siblings = this.notesForTab(tabId);
@@ -212,6 +216,8 @@ class NotabStore {
       [...siblings].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)).at(-1)?.orderKey ??
       null;
     const note = freshNote(tabId, trimmed, orderKeyAfter(lastKey));
+    if (opts.dueDate !== undefined) note.dueDate = opts.dueDate;
+    if (opts.importance) note.importance = opts.importance;
     await this.#commitNote(note);
     return note;
   }

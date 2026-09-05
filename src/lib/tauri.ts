@@ -25,6 +25,24 @@ export async function windowControls() {
   };
 }
 
+export type ResizeDir =
+  | 'North'
+  | 'South'
+  | 'East'
+  | 'West'
+  | 'NorthEast'
+  | 'NorthWest'
+  | 'SouthEast'
+  | 'SouthWest';
+
+/** Begin an interactive resize of the current window from the given edge/corner. */
+export async function startResize(dir: ResizeDir) {
+  if (!inTauri) return;
+  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+  // ResizeDirection enum values are the same PascalCase strings
+  await getCurrentWindow().startResizeDragging(dir as never);
+}
+
 export async function openPinnedWindow(opts: {
   kind: 'note' | 'tab';
   id: string;

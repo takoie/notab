@@ -5,7 +5,7 @@
   import { notab } from '$lib/stores/notab.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { on } from '$lib/sync/bus';
-  import { windowControls } from '$lib/tauri';
+  import { windowControls, startResize, type ResizeDir } from '$lib/tauri';
   import LockScreen from '$lib/components/LockScreen.svelte';
   import NoteRow from '$lib/components/NoteRow.svelte';
 
@@ -25,12 +25,17 @@
     ready = true;
   });
 
-  const note = $derived(kind === 'note' ? notab.getNote(id) : undefined);
-  const tab = $derived(kind === 'tab' ? notab.getTab(id) : undefined);
+  // read the reactive $state arrays directly so these recompute after load
+  const note = $derived(
+    kind === 'note' ? notab.notes.find((n) => n.id === id) : undefined,
+  );
+  const tab = $derived(kind === 'tab' ? notab.tabs.find((t) => t.id === id) : undefined);
   const tabNotes = $derived(kind === 'tab' ? notab.notesForTab(id) : []);
 
   const gone = $derived(
-    ready && ((kind === 'note' && (!note || note.deleted)) || (kind === 'tab' && (!tab || tab.deleted))),
+    ready &&
+      ((kind === 'note' && (!note || note.deleted)) ||
+        (kind === 'tab' && (!tab || tab.deleted))),
   );
 
   async function close() {
@@ -38,7 +43,9 @@
   }
 </script>
 
-<div class="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-canvas">
+<div
+  class="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-canvas"
+>
   <header
     class="drag-region flex h-8 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2.5"
   >
@@ -73,6 +80,18 @@
       {/if}
     {/if}
   </div>
+
+  <!-- invisible resize edges + corner grip (frameless window) -->
+  {#each [['East', 'right-0 top-2 bottom-2 w-1 cursor-ew-resize'], ['South', 'bottom-0 left-2 right-2 h-1 cursor-ns-resize'], ['SouthEast', 'bottom-0 right-0 h-3 w-3 cursor-nwse-resize']] as [dir, cls] (dir)}
+    <div
+      role="presentation"
+      class="absolute {cls}"
+      onpointerdown={(e) => {
+        e.preventDefault();
+        void startResize(dir as ResizeDir);
+      }}
+    ></div>
+  {/each}
 
   {#if lock.locked}
     <LockScreen />

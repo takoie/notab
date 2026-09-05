@@ -4,6 +4,7 @@
   import { notab } from '$lib/stores/notab.svelte';
   import { openPinnedWindow, closePinnedWindow } from '$lib/tauri';
   import { focusOnMount } from '$lib/actions/focus';
+  import { dueLabel, dueTooltip, startOfToday } from '$lib/date';
   import { cn } from '$lib/cn';
 
   let {
@@ -41,10 +42,8 @@
     }
   }
 
-  const dueLabel = $derived(
-    note.dueDate
-      ? new Date(note.dueDate).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
-      : null,
+  const overdue = $derived(
+    note.dueDate != null && !note.done && note.dueDate < startOfToday(),
   );
 </script>
 
@@ -97,9 +96,15 @@
         {note.title}
       </button>
     {/if}
-    {#if dueLabel}
-      <span class="mt-0.5 flex items-center gap-1 text-[11px] text-ink-faint">
-        <Calendar size={11} />{dueLabel}
+    {#if note.dueDate != null}
+      <span
+        class={cn(
+          'mt-0.5 flex w-fit items-center gap-1 text-[11px]',
+          overdue ? 'font-medium text-danger' : 'text-ink-faint',
+        )}
+        title={dueTooltip(note.dueDate)}
+      >
+        <Calendar size={11} />{dueLabel(note.dueDate)}
       </span>
     {/if}
   </div>

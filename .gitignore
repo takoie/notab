@@ -12,6 +12,7 @@ dist/
 # tauri / rust
 src-tauri/target/
 src-tauri/gen/
+ARCHITECTURE_TEMPLATE.md
 
 # editor
 .vscode/*
@@ -25,3 +26,6 @@ coverage/
 .agents/
 .claude/skills/
 skills-lock.json
+
+# graphify knowledge-graph output (regenerate with /graphify)
+graphify-out/
