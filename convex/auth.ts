@@ -77,10 +77,11 @@ export const logout = mutation({
 export const me = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (!args.token) return null;
+    const token = args.token;
+    if (!token) return null;
     const row = await ctx.db
       .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.token))
+      .withIndex('by_token', (q) => q.eq('token', token))
       .unique();
     if (!row) return null;
     const user = await ctx.db.get(row.userId);

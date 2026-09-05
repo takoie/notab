@@ -4,7 +4,14 @@ import { convexConfigured, mutateOnce, queryOnce } from '../convex.svelte';
 import { session } from '../stores/session.svelte';
 import * as local from '../db/local';
 import { emit, on } from './bus';
-import { mergeBatch, pickWinner, type Versioned } from './reconcile';
+import {
+  mergeBatch,
+  pickWinner,
+  type Versioned,
+  type WireOp,
+  type WireTab,
+  type WireNote,
+} from './reconcile';
 
 const PULL_INTERVAL_MS = 20_000;
 const FLUSH_DEBOUNCE_MS = 800;
@@ -99,10 +106,10 @@ class SyncEngine {
       .slice(0, 100);
     if (ops.length === 0) return;
 
-    const wire = ops.map((o) =>
+    const wire: WireOp[] = ops.map((o) =>
       o.type === 'upsertTab' || o.type === 'deleteTab'
-        ? { kind: 'tab' as const, ...(o.payload as Record<string, unknown>) }
-        : { kind: 'note' as const, ...(o.payload as Record<string, unknown>) },
+        ? { kind: 'tab', ...(o.payload as Omit<WireTab, 'kind'>) }
+        : { kind: 'note', ...(o.payload as Omit<WireNote, 'kind'>) },
     );
 
     try {

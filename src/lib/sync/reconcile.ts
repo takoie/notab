@@ -54,8 +54,35 @@ export function mergeBatch<T extends Versioned>(
   return { toWrite, localWins };
 }
 
+export interface WireTab {
+  kind: 'tab';
+  id: string;
+  name: string;
+  color: string | null;
+  sortMode: Tab['sortMode'];
+  orderKey: string;
+  deleted: boolean;
+  clientUpdatedAt: number;
+}
+
+export interface WireNote {
+  kind: 'note';
+  id: string;
+  tabId: string;
+  title: string;
+  body: string;
+  done: boolean;
+  importance: Note['importance'];
+  dueDate: number | null;
+  orderKey: string;
+  deleted: boolean;
+  clientUpdatedAt: number;
+}
+
+export type WireOp = WireTab | WireNote;
+
 /** Strip client-only bookkeeping before sending a row to the server. */
-export function tabToWire(t: Tab) {
+export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
   return {
     id: t.id,
     name: t.name,
@@ -67,7 +94,7 @@ export function tabToWire(t: Tab) {
   };
 }
 
-export function noteToWire(n: Note) {
+export function noteToWire(n: Note): Omit<WireNote, 'kind'> {
   return {
     id: n.id,
     tabId: n.tabId,

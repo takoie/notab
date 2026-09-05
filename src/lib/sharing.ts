@@ -1,4 +1,5 @@
 import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { convexConfigured, mutateOnce, queryOnce } from './convex.svelte';
 import { session } from './stores/session.svelte';
 import { syncEngine } from './sync/engine.svelte';
@@ -61,7 +62,11 @@ export async function listMembers(tabCid: string): Promise<Member[]> {
 
 export async function removeMember(tabCid: string, userId: string): Promise<void> {
   const token = requireAuth();
-  await mutateOnce(api.tabs.removeMember, { token, tabCid, userId });
+  await mutateOnce(api.tabs.removeMember, {
+    token,
+    tabCid,
+    userId: userId as Id<'users'>,
+  });
 }
 
 export async function leaveTab(tabCid: string): Promise<void> {
