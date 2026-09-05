@@ -8,6 +8,7 @@
   import { windowControls, startResize, type ResizeDir } from '$lib/tauri';
   import LockScreen from '$lib/components/LockScreen.svelte';
   import NoteRow from '$lib/components/NoteRow.svelte';
+  import ImageLightbox from '$lib/components/ImageLightbox.svelte';
 
   const params = new URLSearchParams(location.search);
   const kind = params.get('kind') as 'note' | 'tab' | null;
@@ -67,10 +68,7 @@
     {:else if gone}
       <p class="p-3 text-[12px] text-ink-faint">Elementet finnes ikke lenger.</p>
     {:else if kind === 'note' && note}
-      <NoteRow {note} />
-      {#if note.body}
-        <p class="whitespace-pre-wrap px-3 py-2 text-[12px] text-ink-soft">{note.body}</p>
-      {/if}
+      <NoteRow {note} forceOpen />
     {:else if kind === 'tab' && tab}
       {#each tabNotes as n (n.id)}
         <NoteRow note={n} />
@@ -96,4 +94,6 @@
   {#if lock.locked}
     <LockScreen />
   {/if}
+
+  <ImageLightbox />
 </div>

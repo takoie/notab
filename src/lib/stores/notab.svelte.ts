@@ -28,13 +28,20 @@ function freshTab(name: string, orderKey: string): Tab {
   };
 }
 
-function freshNote(tabId: string, title: string, orderKey: string): Note {
+function freshNote(
+  tabId: string,
+  title: string,
+  orderKey: string,
+  kind: Note['kind'] = 'small',
+): Note {
   const t = now();
   return {
     id: newId(),
     tabId,
+    kind,
     title: title.trim(),
     body: '',
+    images: [],
     done: false,
     importance: 'med',
     dueDate: null,
@@ -55,8 +62,11 @@ class NotabStore {
   activeTabId = $state<string | null>(null);
   /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
   focusComposerFor = $state<string | null>(null);
+  /** which large-note drawers are expanded — local per device, persisted in meta */
+  openDrawers = $state<Record<string, true>>({});
 
   #byId = new Map<string, Note>();
+  #drawersLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -67,6 +77,9 @@ class NotabStore {
   activeTab = $derived(this.visibleTabs.find((t) => t.id === this.activeTabId) ?? null);
 
   async init() {
+    const saved = (await local.getMeta<string[]>('openDrawers')) ?? [];
+    this.openDrawers = Object.fromEntries(saved.map((id) => [id, true as const]));
+    this.#drawersLoaded = true;
     await this.reload();
     this.loaded = true;
     if (!this.activeTabId && this.visibleTabs.length) {
@@ -75,6 +88,50 @@ class NotabStore {
     on((evt) => {
       if (evt.kind === 'remote-change') void this.reload();
     });
+  }
+
+  /* ---------------- large-note drawers (local UI state) ---------------- */
+
+  isDrawerOpen(id: string): boolean {
+    return this.openDrawers[id] === true;
+  }
+
+  #persistDrawers() {
+    if (!this.#drawersLoaded) return;
+    void local.setMeta('openDrawers', Object.keys(this.openDrawers));
+  }
+
+  toggleDrawer(id: string) {
+    const next = { ...this.openDrawers };
+    if (next[id]) delete next[id];
+    else next[id] = true;
+    this.openDrawers = next;
+    this.#persistDrawers();
+  }
+
+  setAllDrawers(tabId: string, open: boolean) {
+    const ids = this.notes
+      .filter((n) => n.tabId === tabId && n.kind === 'large' && !n.deleted)
+      .map((n) => n.id);
+    const next = { ...this.openDrawers };
+    for (const id of ids) {
+      if (open) next[id] = true;
+      else delete next[id];
+    }
+    this.openDrawers = next;
+    this.#persistDrawers();
+  }
+
+  largeNoteCount(tabId: string): number {
+    return this.notes.filter((n) => n.tabId === tabId && n.kind === 'large' && !n.deleted)
+      .length;
+  }
+
+  allDrawersOpen(tabId: string): boolean {
+    const large = this.notes.filter(
+      (n) => n.tabId === tabId && n.kind === 'large' && !n.deleted,
+    );
+    return large.length > 0 && large.every((n) => this.openDrawers[n.id] === true);
   }
 
   async reload() {
@@ -204,27 +261,64 @@ class NotabStore {
 
   /* ---------------- note commands ---------------- */
 
-  async addNote(
-    tabId: string,
-    title: string,
-    opts: { dueDate?: number | null; importance?: Importance } = {},
-  ): Promise<Note | null> {
-    const trimmed = title.trim();
-    if (!trimmed) return null;
+  #nextOrderKey(tabId: string): string {
     const siblings = this.notesForTab(tabId);
     const lastKey =
       [...siblings].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)).at(-1)?.orderKey ??
       null;
-    const note = freshNote(tabId, trimmed, orderKeyAfter(lastKey));
+    return orderKeyAfter(lastKey);
+  }
+
+  async addNote(
+    tabId: string,
+    title: string,
+    opts: {
+      dueDate?: number | null;
+      importance?: Importance;
+      images?: string[];
+      kind?: Note['kind'];
+      body?: string;
+    } = {},
+  ): Promise<Note | null> {
+    const trimmed = title.trim();
+    const images = opts.images ?? [];
+    // a note needs at least a title or an image
+    if (!trimmed && images.length === 0) return null;
+    const note = freshNote(tabId, trimmed || 'Bilde', this.#nextOrderKey(tabId), opts.kind);
     if (opts.dueDate !== undefined) note.dueDate = opts.dueDate;
     if (opts.importance) note.importance = opts.importance;
+    if (opts.body) note.body = opts.body;
+    note.images = images;
     await this.#commitNote(note);
+    if (note.kind === 'large') this.openDrawers = { ...this.openDrawers, [note.id]: true };
     return note;
+  }
+
+  /** Create a large (title + body) note, drawer starts open for the author. */
+  async addLargeNote(
+    tabId: string,
+    data: {
+      title: string;
+      body: string;
+      images?: string[];
+      dueDate?: number | null;
+      importance?: Importance;
+    },
+  ): Promise<Note | null> {
+    return this.addNote(tabId, data.title, {
+      kind: 'large',
+      body: data.body,
+      images: data.images ?? [],
+      dueDate: data.dueDate ?? null,
+      importance: data.importance,
+    });
   }
 
   async updateNote(
     id: string,
-    patch: Partial<Pick<Note, 'title' | 'body' | 'importance' | 'dueDate' | 'done'>>,
+    patch: Partial<
+      Pick<Note, 'title' | 'body' | 'importance' | 'dueDate' | 'done' | 'images' | 'kind'>
+    >,
   ) {
     const note = this.#byId.get(id);
     if (!note) return;

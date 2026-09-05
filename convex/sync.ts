@@ -18,8 +18,10 @@ const noteOp = v.object({
   kind: v.literal('note'),
   id: v.string(),
   tabId: v.string(),
+  noteKind: v.union(v.literal('small'), v.literal('large')),
   title: v.string(),
   body: v.string(),
+  images: v.array(v.string()),
   done: v.boolean(),
   importance,
   dueDate: v.union(v.number(), v.null()),
@@ -93,8 +95,10 @@ export const pushOps = mutation({
           await ctx.db.insert('notes', {
             cid: op.id,
             tabCid: op.tabId,
+            kind: op.noteKind,
             title: op.title,
             body: op.body,
+            images: op.images,
             done: op.done,
             importance: op.importance,
             dueDate: op.dueDate,
@@ -114,8 +118,10 @@ export const pushOps = mutation({
         }
         const now = Math.max(op.clientUpdatedAt, Date.now());
         await ctx.db.patch(existing._id, {
+          kind: op.noteKind,
           title: op.title,
           body: op.body,
+          images: op.images,
           done: op.done,
           importance: op.importance,
           dueDate: op.dueDate,
@@ -170,8 +176,10 @@ export const pullTab = query({
       notes: notes.map((n) => ({
         id: n.cid,
         tabId: n.tabCid,
+        noteKind: n.kind ?? 'small',
         title: n.title,
         body: n.body,
+        images: n.images ?? [],
         done: n.done,
         importance: n.importance,
         dueDate: n.dueDate,

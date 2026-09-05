@@ -1,5 +1,7 @@
 export type Importance = 'low' | 'med' | 'high';
 
+export type NoteKind = 'small' | 'large';
+
 export type SortMode = 'manual' | 'importance' | 'due' | 'done-last';
 
 export const SORT_MODES: SortMode[] = ['manual', 'importance', 'due', 'done-last'];
@@ -28,8 +30,12 @@ export interface Tab {
 export interface Note {
   id: string;
   tabId: string;
+  kind: NoteKind;
   title: string;
+  /** main text — only meaningful for large notes */
   body: string;
+  /** pasted images as downscaled data: URIs */
+  images: string[];
   done: boolean;
   importance: Importance;
   /** epoch ms of the due date (start of day), or null */

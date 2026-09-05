@@ -226,8 +226,10 @@ function remoteToNote(r: Versioned & Record<string, unknown>, siblings: Note[]):
   return {
     id: r.id,
     tabId: (r.tabId as string) ?? prev?.tabId ?? '',
+    kind: (r.noteKind as Note['kind']) ?? prev?.kind ?? 'small',
     title: (r.title as string) ?? '',
     body: (r.body as string) ?? '',
+    images: (r.images as string[]) ?? prev?.images ?? [],
     done: Boolean(r.done),
     importance: (r.importance as Note['importance']) ?? 'med',
     dueDate: (r.dueDate as number | null) ?? null,

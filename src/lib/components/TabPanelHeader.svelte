@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { MoreHorizontal, Pencil, Trash2, Share2, Pin, LogOut } from '@lucide/svelte';
+  import {
+    MoreHorizontal,
+    Pencil,
+    Trash2,
+    Share2,
+    Pin,
+    LogOut,
+    ChevronsDownUp,
+    ChevronsUpDown,
+  } from '@lucide/svelte';
   import type { Tab } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
   import { leaveTab } from '$lib/sharing';
@@ -58,6 +67,18 @@
       }}
     >
       {tab.name}
+    </button>
+  {/if}
+
+  {#if notab.largeNoteCount(tab.id) > 0}
+    {@const allOpen = notab.allDrawersOpen(tab.id)}
+    <button
+      class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-medium text-ink-soft hover:bg-surface-sunken hover:text-ink"
+      title={allOpen ? 'Lukk alle store notater' : 'Utvid alle store notater'}
+      onclick={() => notab.setAllDrawers(tab.id, !allOpen)}
+    >
+      {#if allOpen}<ChevronsDownUp size={14} />{:else}<ChevronsUpDown size={14} />{/if}
+      <span class="hidden sm:inline">{allOpen ? 'Lukk alle' : 'Utvid alle'}</span>
     </button>
   {/if}
 

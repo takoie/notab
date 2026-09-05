@@ -57,8 +57,12 @@ export default defineSchema({
   notes: defineTable({
     cid: v.string(),
     tabCid: v.string(),
+    // optional so an existing deployment doesn't need a migration; the client
+    // always sends them and sync.ts defaults them on read.
+    kind: v.optional(v.union(v.literal('small'), v.literal('large'))),
     title: v.string(),
     body: v.string(),
+    images: v.optional(v.array(v.string())),
     done: v.boolean(),
     importance,
     dueDate: v.union(v.number(), v.null()),

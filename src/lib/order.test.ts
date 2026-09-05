@@ -13,8 +13,10 @@ function note(p: Partial<Note>): Note {
   return {
     id: p.id ?? 'n',
     tabId: 't',
+    kind: 'small',
     title: p.title ?? '',
     body: '',
+    images: [],
     done: p.done ?? false,
     importance: p.importance ?? 'med',
     dueDate: p.dueDate ?? null,
