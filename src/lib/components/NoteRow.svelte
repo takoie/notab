@@ -15,12 +15,12 @@
   let editing = $state(false);
   let draft = $state('');
 
-  const IMP_COLOR: Record<Importance, string> = {
-    high: 'text-danger',
-    med: 'text-warn',
-    low: 'text-ink-faint',
-  };
   const IMP_NEXT: Record<Importance, Importance> = { low: 'med', med: 'high', high: 'low' };
+  const IMP_TITLE: Record<Importance, string> = {
+    low: 'Lav prioritet — klikk for å heve',
+    med: 'Middels prioritet',
+    high: 'Viktig',
+  };
 
   function startEdit() {
     draft = note.title;
@@ -42,38 +42,67 @@
     }
   }
 
-  const overdue = $derived(
-    note.dueDate != null && !note.done && note.dueDate < startOfToday(),
-  );
+  const overdue = $derived(note.dueDate != null && !note.done && note.dueDate < startOfToday());
 </script>
 
 <div
   class={cn(
-    'group flex items-center gap-2 rounded-xl border border-transparent px-2 py-2 hover:border-border hover:bg-surface',
-    note.done && 'opacity-55',
+    'group relative flex items-center gap-2.5 rounded-lg border px-2.5 py-2 transition-[background-color,border-color,box-shadow,transform] duration-150 ease-soft',
+    note.done
+      ? 'border-border/60 bg-surface-sunken'
+      : 'border-border bg-surface hover:-translate-y-px hover:border-border-strong hover:bg-surface-raised hover:shadow-card',
+    !note.done &&
+      note.importance === 'high' &&
+      'border-danger/45 bg-[rgb(var(--c-danger)/0.09)] ring-1 ring-inset ring-danger/15 hover:border-danger/60',
+    note.done && 'opacity-60',
   )}
 >
   {#if draggable}
-    <span class="drag-handle cursor-grab text-ink-faint opacity-0 group-hover:opacity-100">
+    <span
+      class="drag-handle -ml-1 cursor-grab text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
+    >
       <GripVertical size={16} />
     </span>
   {/if}
 
   <button
     class={cn(
-      'grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border transition-colors',
+      'grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
       note.done
         ? 'border-accent bg-accent text-accent-ink'
-        : 'border-border-strong hover:border-accent',
+        : note.importance === 'high'
+          ? 'border-danger/50 hover:border-danger'
+          : 'border-border-strong hover:border-accent',
     )}
     aria-label={note.done ? 'Merk som ikke gjort' : 'Merk som gjort'}
     onclick={() => notab.toggleDone(note.id)}
   >
     {#if note.done}
-      <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2">
+      <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M2.5 6.5l2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     {/if}
+  </button>
+
+  <!-- priority flag: always visible for med/high, hidden until hover for low -->
+  <button
+    class={cn(
+      'grid h-6 w-6 shrink-0 place-items-center rounded-md transition-all duration-150',
+      note.importance === 'high' &&
+        'bg-[rgb(var(--c-danger)/0.14)] text-danger hover:bg-[rgb(var(--c-danger)/0.2)]',
+      note.importance === 'med' && 'text-warn hover:bg-surface-sunken',
+      note.importance === 'low' &&
+        'text-ink-faint opacity-0 hover:bg-surface-sunken group-hover:opacity-70',
+    )}
+    title={IMP_TITLE[note.importance]}
+    aria-label={IMP_TITLE[note.importance]}
+    onclick={() => notab.setImportance(note.id, IMP_NEXT[note.importance])}
+  >
+    <Flag
+      size={note.importance === 'high' ? 15 : 14}
+      fill={note.importance === 'low' ? 'none' : 'currentColor'}
+      strokeWidth={2}
+    />
   </button>
 
   <div class="min-w-0 flex-1">
@@ -90,7 +119,11 @@
       />
     {:else}
       <button
-        class={cn('block truncate text-left text-[13px] text-ink', note.done && 'line-through')}
+        class={cn(
+          'block max-w-full truncate text-left text-[13px] text-ink',
+          note.done && 'text-ink-soft line-through',
+          !note.done && note.importance === 'high' && 'font-medium',
+        )}
         ondblclick={startEdit}
       >
         {note.title}
@@ -99,8 +132,10 @@
     {#if note.dueDate != null}
       <span
         class={cn(
-          'mt-0.5 flex w-fit items-center gap-1 text-[11px]',
-          overdue ? 'font-medium text-danger' : 'text-ink-faint',
+          'mt-0.5 flex w-fit items-center gap-1 rounded px-1 text-[11px] tabular-nums',
+          overdue
+            ? 'bg-[rgb(var(--c-danger)/0.12)] font-medium text-danger'
+            : 'text-ink-faint',
         )}
         title={dueTooltip(note.dueDate)}
       >
@@ -109,23 +144,19 @@
     {/if}
   </div>
 
-  <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+  <div
+    class="flex items-center gap-0.5 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+  >
     <button
-      class={cn('grid h-7 w-7 place-items-center rounded-lg hover:bg-surface-sunken', IMP_COLOR[note.importance])}
-      title="Viktighet"
-      onclick={() => notab.setImportance(note.id, IMP_NEXT[note.importance])}
-    >
-      <Flag size={14} />
-    </button>
-    <button
-      class="grid h-7 w-7 place-items-center rounded-lg text-ink-faint hover:bg-surface-sunken hover:text-ink"
+      class="grid h-7 w-7 place-items-center rounded-lg hover:bg-surface-sunken hover:text-ink"
+      class:text-accent={note.pinned}
       title={note.pinned ? 'Løsne popup' : 'Fest som popup'}
       onclick={togglePin}
     >
       {#if note.pinned}<PinOff size={14} />{:else}<Pin size={14} />{/if}
     </button>
     <button
-      class="grid h-7 w-7 place-items-center rounded-lg text-ink-faint hover:bg-surface-sunken hover:text-danger"
+      class="grid h-7 w-7 place-items-center rounded-lg hover:bg-surface-sunken hover:text-danger"
       title="Slett"
       onclick={() => notab.deleteNote(note.id)}
     >

@@ -3,8 +3,18 @@
   import { windowControls } from '$lib/tauri';
   import { theme } from '$lib/stores/theme.svelte';
   import { lock } from '$lib/stores/lock.svelte';
+  import { toasts } from '$lib/stores/toasts.svelte';
 
   let { onOpenSettings }: { onOpenSettings: () => void } = $props();
+
+  function lockNow() {
+    if (lock.enabled) {
+      lock.lockNow();
+    } else {
+      onOpenSettings();
+      toasts.push('Sett en PIN-kode i innstillinger for å låse Notab');
+    }
+  }
 
   const ctl = windowControls();
 
@@ -27,6 +37,24 @@
   <div class="flex-1"></div>
 
   <button
+    class={[
+      'no-drag flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] font-medium transition-colors',
+      lock.enabled
+        ? 'text-ink-soft hover:bg-accent-soft hover:text-accent'
+        : 'text-ink-faint hover:bg-surface-sunken hover:text-ink',
+    ].join(' ')}
+    title={lock.enabled
+      ? `Lås Notab (auto etter ${lock.idleMinutes} min)`
+      : 'Lås Notab — krever PIN-kode'}
+    onclick={lockNow}
+  >
+    <Lock size={15} />
+    <span>Lås</span>
+  </button>
+
+  <div class="mx-0.5 h-5 w-px bg-border"></div>
+
+  <button
     class="no-drag grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
     title="Innstillinger"
     onclick={onOpenSettings}
@@ -40,15 +68,6 @@
   >
     {#if theme.resolved === 'dark'}<Sun size={16} />{:else}<Moon size={16} />{/if}
   </button>
-  {#if lock.enabled}
-    <button
-      class="no-drag grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
-      title="Lås Notab"
-      onclick={() => lock.lockNow()}
-    >
-      <Lock size={16} />
-    </button>
-  {/if}
 
   <div class="mx-1 h-5 w-px bg-border"></div>
 

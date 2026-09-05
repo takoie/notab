@@ -31,7 +31,7 @@
   </div>
 {:else if manual}
   <div
-    class="flex-1 space-y-0.5 overflow-y-auto px-3 py-2"
+    class="flex-1 space-y-1.5 overflow-y-auto px-3 py-2.5"
     use:dndzone={{
       items: view,
       flipDurationMs: flipMs,
@@ -48,7 +48,7 @@
     {/each}
   </div>
 {:else}
-  <div class="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+  <div class="flex-1 space-y-1.5 overflow-y-auto px-3 py-2.5">
     {#each notes as note (note.id)}
       <NoteRow {note} />
     {/each}
