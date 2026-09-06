@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import TitleBar from '$lib/components/TitleBar.svelte';
   import TabBar from '$lib/components/TabBar.svelte';
-  import TabPanelHeader from '$lib/components/TabPanelHeader.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
   import SortMenu from '$lib/components/SortMenu.svelte';
   import NoteList from '$lib/components/NoteList.svelte';
@@ -57,12 +56,11 @@
   {:else if showAuth}
     <AuthView onDone={finishAuth} />
   {:else}
-    <TabBar />
+    <TabBar onShare={() => (shareOpen = true)} />
 
     <main class="flex min-h-0 flex-1 flex-col">
       {#if notab.activeTab}
         {#key notab.activeTab.id}
-          <TabPanelHeader tab={notab.activeTab} onShare={() => (shareOpen = true)} />
           <NoteComposer tabId={notab.activeTab.id} tabName={notab.activeTab.name} />
           <div class="flex justify-end px-4 pb-1">
             <SortMenu

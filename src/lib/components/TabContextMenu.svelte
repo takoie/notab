@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Pencil, Trash2, Archive, LogOut } from '@lucide/svelte';
+  import { Pencil, Trash2, Archive, LogOut, Pin } from '@lucide/svelte';
   import type { Tab } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
   import { leaveTab } from '$lib/sharing';
+  import { openPinnedWindow } from '$lib/tauri';
   import { toasts } from '$lib/stores/toasts.svelte';
   import Popover from './ui/Popover.svelte';
   import MenuItem from './ui/MenuItem.svelte';
@@ -43,6 +44,11 @@
     await notab.archiveTab(tab.id);
     toasts.success('Fane arkivert — se Innstillinger for å hente den tilbake');
   }
+
+  async function pinTab() {
+    open = false;
+    await openPinnedWindow({ kind: 'tab', id: tab.id, title: tab.name });
+  }
 </script>
 
 <Popover {anchor} bind:open placement="bottom-start" label="Fanevalg" class="w-52">
@@ -76,6 +82,7 @@
     {/each}
   </div>
 
+  <MenuItem icon={Pin} onclick={pinTab}>Fest fane som popup</MenuItem>
   <MenuItem icon={Archive} onclick={archive}>Arkiver</MenuItem>
   <MenuItem icon={tab.joined ? LogOut : Trash2} danger onclick={remove}>
     {tab.joined ? 'Forlat fane' : 'Slett fane'}

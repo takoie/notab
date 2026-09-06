@@ -1,12 +1,14 @@
 <script lang="ts">
   import { dndzone } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
-  import { Plus } from '@lucide/svelte';
+  import { Plus, Share2, MoreHorizontal } from '@lucide/svelte';
   import { notab } from '$lib/stores/notab.svelte';
   import { focusOnMount } from '$lib/actions/focus';
   import { cn } from '$lib/cn';
   import NewTabPopover from './NewTabPopover.svelte';
   import TabContextMenu from './TabContextMenu.svelte';
+
+  let { onShare }: { onShare: () => void } = $props();
 
   const flipMs = 150;
 
@@ -34,10 +36,11 @@
   let plusBtn = $state<HTMLButtonElement | undefined>();
   let newTabOpen = $state(false);
 
-  /* ---- per-tab right-click menu ---- */
+  /* ---- tab menu (right-click a tab, or the ⋯ button for the active tab) ---- */
   let ctxAnchor = $state<HTMLElement | undefined>();
   let ctxTabId = $state<string | null>(null);
   let ctxOpen = $state(false);
+  let moreBtn = $state<HTMLButtonElement | undefined>();
   const ctxTab = $derived(ctxTabId ? (notab.getTab(ctxTabId) ?? null) : null);
 
   function openContext(e: MouseEvent, id: string) {
@@ -45,6 +48,12 @@
     ctxAnchor = e.currentTarget as HTMLElement;
     ctxTabId = id;
     ctxOpen = true;
+  }
+  function openActiveMenu() {
+    if (!notab.activeTabId) return;
+    ctxAnchor = moreBtn;
+    ctxTabId = notab.activeTabId;
+    ctxOpen = !ctxOpen;
   }
 
   /* ---- inline rename ---- */
@@ -71,9 +80,9 @@
   }
 </script>
 
-<div class="flex items-end gap-0.5 border-b border-border bg-surface px-2 pt-1.5">
+<div class="flex items-end gap-1 border-b border-border bg-surface px-2 pt-2">
   <div
-    class="flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden"
+    class="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden"
     use:dndzone={{ items: view, flipDurationMs: flipMs, type: 'tabs' }}
     onconsider={handleConsider}
     onfinalize={handleFinalize}
@@ -83,7 +92,7 @@
       <div animate:flip={{ duration: flipMs }} class="shrink-0">
         {#if renamingId === tab.id}
           <input
-            class="w-[14ch] rounded-t-lg border border-b-0 border-border bg-canvas px-3 py-1.5 text-[13px] font-medium text-ink outline-none ring-1 ring-inset ring-accent/30"
+            class="w-[15ch] rounded-t-[10px] border border-b-0 border-t-[3px] border-border border-t-accent bg-canvas px-3.5 py-2 text-[13px] font-semibold text-ink outline-none ring-1 ring-inset ring-accent/40"
             bind:value={renameDraft}
             onblur={commitRename}
             onkeydown={(e) => {
@@ -95,23 +104,28 @@
         {:else}
           <button
             class={cn(
-              'group relative -mb-px flex items-center gap-1.5 rounded-t-lg border border-b-0 border-t-[3px] px-3 py-1.5 text-[13px] font-medium transition-colors',
+              'group relative -mb-px flex items-center gap-1.5 rounded-t-[10px] border border-b-0 border-t-[3px] text-[13px] transition-all',
               isActive
-                ? 'z-10 border-border bg-canvas text-ink'
-                : 'border-transparent text-ink-soft hover:text-ink',
-              isActive && !tab.color && 'border-t-accent',
+                ? 'z-10 border-border bg-canvas px-4 py-2 font-semibold text-ink shadow-[0_-3px_8px_-4px_rgb(15_23_42_/_0.18)]'
+                : 'border-transparent px-3.5 py-1.5 font-medium text-ink-faint hover:text-ink-soft',
+              !isActive && !tab.color && 'hover:bg-surface-sunken',
             )}
-            style:border-top-color={tab.color
-              ? isActive
-                ? tab.color
-                : tint(tab.color, 55)
-              : undefined}
-            style:background-color={!isActive && tab.color ? tint(tab.color, 16) : undefined}
+            style:border-top-color={isActive
+              ? (tab.color ?? 'rgb(var(--c-accent))')
+              : tab.color
+                ? tint(tab.color, 45)
+                : 'transparent'}
+            style:background-color={!isActive && tab.color ? tint(tab.color, 15) : undefined}
+            title="Dobbeltklikk for å gi nytt navn"
             onclick={() => (notab.activeTabId = tab.id)}
             oncontextmenu={(e) => openContext(e, tab.id)}
             ondblclick={() => startRename(tab.id)}
           >
-            <span class="max-w-[14ch] truncate">{tab.name}</span>
+            {#if tab.color}
+              <span class="h-2 w-2 shrink-0 rounded-full" style:background-color={tab.color}
+              ></span>
+            {/if}
+            <span class="max-w-[16ch] truncate">{tab.name}</span>
             {#if tab.open > 0}
               <span
                 class={cn(
@@ -128,15 +142,36 @@
     {/each}
   </div>
 
-  <button
-    bind:this={plusBtn}
-    class="mb-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
-    title="Ny fane"
-    aria-label="Ny fane"
-    onclick={() => (newTabOpen = !newTabOpen)}
-  >
-    <Plus size={16} />
-  </button>
+  <div class="mb-1 flex shrink-0 items-center gap-0.5">
+    {#if notab.activeTabId}
+      <button
+        class="grid h-7 w-7 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
+        title="Del fane"
+        aria-label="Del fane"
+        onclick={onShare}
+      >
+        <Share2 size={15} />
+      </button>
+      <button
+        bind:this={moreBtn}
+        class="grid h-7 w-7 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
+        title="Flere valg"
+        aria-label="Flere valg"
+        onclick={openActiveMenu}
+      >
+        <MoreHorizontal size={16} />
+      </button>
+    {/if}
+    <button
+      bind:this={plusBtn}
+      class="grid h-7 w-7 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
+      title="Ny fane"
+      aria-label="Ny fane"
+      onclick={() => (newTabOpen = !newTabOpen)}
+    >
+      <Plus size={16} />
+    </button>
+  </div>
 </div>
 
 <NewTabPopover anchor={plusBtn} bind:open={newTabOpen} />
