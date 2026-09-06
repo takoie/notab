@@ -91,15 +91,20 @@ fn urlencode(s: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  // NOTE: the `tauri-plugin-updater` dependency is kept in Cargo.toml but the
-  // plugin is NOT registered yet — it refuses to initialize without a
-  // `plugins.updater` block in tauri.conf.json (endpoints + pubkey). Re-enable
-  // by adding that config and restoring the `.plugin(tauri_plugin_updater...)`
-  // line below when the release pipeline is set up.
-  tauri::Builder::default()
+  #[allow(unused_mut)]
+  let mut builder = tauri::Builder::default()
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_process::init())
-    .plugin(tauri_plugin_store::Builder::new().build())
+    .plugin(tauri_plugin_store::Builder::new().build());
+
+  // The updater plugin is desktop-only; it reads its endpoints + pubkey from the
+  // `plugins.updater` block in tauri.conf.json.
+  #[cfg(not(any(target_os = "android", target_os = "ios")))]
+  {
+    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+  }
+
+  builder
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

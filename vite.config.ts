@@ -23,7 +23,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,svelte.ts}', 'convex/**/*.test.ts'],
+    include: [
+      'src/**/*.{test,spec}.{ts,svelte.ts}',
+      'convex/**/*.test.ts',
+      'scripts/**/*.test.mjs',
+    ],
     globals: true,
   },
 });

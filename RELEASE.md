@@ -1,56 +1,118 @@
-# 🚀 Release & Byggemanual for Atlantasy Desktop
+# 🚀 Release- og byggemanual for NotaB!
 
-Denne guiden beskriver hvordan du publiserer nye oppdateringer og installasjonsprogrammer for **Atlantasy Desktop** raskt og smertefritt.
-
----
-
-## ⚡ Rask 1-2-3 Guide
-
-### 1. Oppdater versjonsnummer
-Når du skal lage en ny versjon (f.eks. `0.6.0`), oppdater versjonen i følgende filer:
-- `package.json` (`"version": "0.6.0"`)
-- `src-tauri/tauri.conf.json` (`"version": "0.6.0"`)
-- `src-tauri/Cargo.toml` (`version = "0.6.0"`)
-- `src/lib/components/Sidebar.svelte` (v0.6.0 badge)
-- `src/App.svelte` (`currentVersion="0.6.0"`)
-- `src/lib/components/UpdateModal.svelte` (`currentVersion = "0.6.0"`)
+Slik publiserer du en ny versjon av **NotaB! Desktop** og lar eksisterende
+installasjoner oppdatere seg selv (med toast-varsel i appen).
 
 ---
 
-### 2. Kompiler og signer installasjonsfilene
-Kjør i terminalen:
+## ⚡ Rask 1-2-3
 
+### 1. Bestem versjonsnummer
+Semver `x.y.z`, f.eks. `0.2.0`. Du trenger **ikke** redigere filer manuelt —
+`npm run release` bumper `package.json`, `src-tauri/tauri.conf.json` og
+`src-tauri/Cargo.toml` for deg.
+
+### 2. Kjør releasen
 ```powershell
-npm run build:exe
+npm run release -- 0.2.0 --notes "Kort endringslogg her"
 ```
 
-Dette bygger frontend, kompilerer, signerer med kryptografisk nøkkel og genererer:
-- `src-tauri/target/release/bundle/nsis/Atlantasy_<VERSJON>_x64-setup.exe` (NSIS-installer)
-- `src-tauri/target/release/bundle/msi/Atlantasy_<VERSJON>_x64_en-US.msi` (MSI-pakke)
-- `src-tauri/target/release/bundle/nsis/Atlantasy_<VERSJON>_x64-setup.exe.sig` (Kryptografisk signatur)
-- `latest.json` (Automatisk generert manifest for sømløs in-app oppdatering)
+Skriptet ([`scripts/release.mjs`](scripts/release.mjs)) gjør alt:
+
+1. Sjekker at git er rent og at du står på `main`.
+2. Laster signeringsnøkkel fra `.env.release`.
+3. Bumper versjon i de tre filene.
+4. Kjører `npm run check` + `npm test` (hopp over med `--skip-checks`).
+5. `npx tauri build` → signerer og bygger:
+   - `src-tauri/target/release/bundle/nsis/NotaB!_0.2.0_x64-setup.exe` (+ `.sig`)
+   - `src-tauri/target/release/bundle/msi/NotaB!_0.2.0_x64_en-US.msi`
+6. Lager `latest.json` (oppdateringsmanifest) fra `.sig`-fila.
+7. `git commit` + `git tag v0.2.0` + `git push --follow-tags`.
+8. `gh release create v0.2.0 …` med installer, MSI og `latest.json`.
+9. Leser opp den faktiske asset-URL-en fra GitHub og retter `latest.json`
+   hvis GitHub har endret filnavnet (`NotaB!` → `NotaB_` o.l.).
+
+### 3. Ferdig
+Neste gang en eksisterende installasjon starter, ser den etter oppdatering mot
+`https://github.com/takoie/notab/releases/latest/download/latest.json`.
+Finnes en nyere versjon, dukker det opp en toast nederst:
+**«NotaB! 0.2.0 er tilgjengelig» → «Installer og start på nytt»**.
+Brukeren kan også trykke **Innstillinger → Om NotaB! → Se etter oppdateringer**.
+
+> Tørrkjøring uten å bygge/pushe: `npm run release -- 0.2.0 --dry-run`
 
 ---
 
-### 3. Publiser til GitHub
-Kjør følgende kommandoer for å pushe og opprette releasen på GitHub:
+## 🔧 Engangsoppsett (allerede gjort på denne maskinen)
+
+### Signeringsnøkler
+Generert lokalt med:
+```powershell
+npx tauri signer generate -w "$env:USERPROFILE\.tauri\notab.key" --password "" --force
+```
+
+- **Privat nøkkel:** `%USERPROFILE%\.tauri\notab.key` — *aldri* i git. Mister du
+  den, kan ingen eksisterende installasjon oppdatere seg (de må reinstalleres
+  manuelt fra en ny release signert med ny nøkkel).
+- **Offentlig nøkkel:** `%USERPROFILE%\.tauri\notab.key.pub` — innholdet ligger i
+  `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`.
+- **`.env.release`** (gitignored) i repo-rota peker byggeskriptet på nøkkelen:
+  ```
+  TAURI_SIGNING_PRIVATE_KEY=C:\Users\stian.TAKO\.tauri\notab.key
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD=
+  ```
+
+### GitHub
+- Repo: `https://github.com/takoie/notab` (offentlig — updater henter release-
+  filer over vanlig HTTPS, ingen token i appen).
+- `gh auth status` må vise en innlogget konto med `repo`- og `workflow`-scope.
+
+### Tauri-oppsett i koden
+- `src-tauri/tauri.conf.json`: `bundle.createUpdaterArtifacts: true` +
+  `plugins.updater` (endpoint + pubkey).
+- `src-tauri/src/lib.rs`: `tauri_plugin_updater` registrert (kun desktop).
+- `src-tauri/capabilities/default.json`: `updater:default` + `process:allow-restart`.
+- Frontend: [`src/lib/updater.ts`](src/lib/updater.ts) sjekker ved oppstart
+  (`App.svelte` `onMount`, kun hovedvinduet) og fra `SettingsDialog.svelte`.
+
+---
+
+## 🛟 Manuell fallback (hvis skriptet feiler halvveis)
 
 ```powershell
-# 1. Commit og tagg
-git commit -am "release: v0.7.1"
-git tag -a v0.7.1 -m "Atlantasy Desktop v0.7.1"
+# 1. Versjon alt bumpet? Ellers rediger package.json, src-tauri/tauri.conf.json,
+#    src-tauri/Cargo.toml manuelt.
 
-# 2. Push til GitHub
-git push origin main --tags
+# 2. Bygg signert (les .env.release inn i miljøet først)
+$env:TAURI_SIGNING_PRIVATE_KEY = "C:\Users\stian.TAKO\.tauri\notab.key"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+npx tauri build
 
-# 3. Last opp installasjonsfilene og latest.json til GitHub Releases
-gh release create v0.7.1 "src-tauri/target/release/bundle/nsis/Atlantasy_0.7.1_x64-setup.exe" "src-tauri/target/release/bundle/msi/Atlantasy_0.7.1_x64_en-US.msi" "latest.json" --title "Atlantasy Desktop v0.7.1" --notes "### 🚀 Endringslogg for v0.7.1"
+# 3. Lag latest.json for hånd (signaturen er HELE innholdet i .sig-fila)
+#    Se scripts/release.mjs -> buildLatestJson for eksakt form.
+
+# 4. Commit, tag, push
+git commit -am "release: v0.2.0"
+git tag -a v0.2.0 -m "NotaB! v0.2.0"
+git push --follow-tags origin main
+
+# 5. Publiser
+gh release create v0.2.0 `
+  "src-tauri/target/release/bundle/nsis/NotaB!_0.2.0_x64-setup.exe" `
+  "src-tauri/target/release/bundle/msi/NotaB!_0.2.0_x64_en-US.msi" `
+  "src-tauri/target/release/bundle/latest.json" `
+  --title "NotaB! v0.2.0" --notes "### Endringslogg for v0.2.0"
+
+# 6. Sjekk at installer-URL-en i latest.json matcher den faktiske asseten:
+gh release view v0.2.0 --json assets
+#    Er navnet endret, rett latest.json og:  gh release upload v0.2.0 latest.json --clobber
 ```
 
 ---
 
-## 💡 Hjelp fra AI Agent
-Du kan når som helst bare be agenten:
-> *"Lag en ny release v0.6.0, bygg exe og push til GitHub"*
+## 💡 Fra AI-agent
+> *«Lag en ny release v0.2.0, bygg og push til GitHub»*
 
-Agenten vil automatisk følge instruksene definert i [`.agents/rules/release-guide.md`](file:///.agents/rules/release-guide.md).
+Agenten følger denne fila: bump via `npm run release -- <versjon>`, verifiser at
+`gh release view` viser de tre assetene, og at `latest.json` sin installer-URL
+peker på riktig `-setup.exe`.

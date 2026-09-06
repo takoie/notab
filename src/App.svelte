@@ -22,6 +22,7 @@
   import { notab } from '$lib/stores/notab.svelte';
   import { syncEngine } from '$lib/sync/engine.svelte';
   import { getMeta, setMeta } from '$lib/db/local';
+  import { checkForUpdate } from '$lib/updater';
   import { NotebookPen, LogIn } from '@lucide/svelte';
 
   let ready = $state(false);
@@ -41,6 +42,10 @@
     const onboarded = await getMeta<boolean>('onboarded');
     if (!onboarded && !session.signedIn) showAuth = true;
     ready = true;
+
+    // Look for a new desktop release in the background; stays silent unless one
+    // is found (then a toast with an "install & restart" button appears).
+    void checkForUpdate({ silent: true });
   });
 
   async function finishAuth() {

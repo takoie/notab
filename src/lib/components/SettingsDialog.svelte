@@ -9,6 +9,9 @@
   import { notab } from '$lib/stores/notab.svelte';
   import { settings, PROOF_LANGS } from '$lib/stores/settings.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
+  import { inTauri } from '$lib/tauri';
+  import { checkForUpdate } from '$lib/updater';
+  import { onMount } from 'svelte';
   import { RotateCcw, Trash2 } from '@lucide/svelte';
   import type { ThemePref } from '$lib/stores/theme.svelte';
   import type { ProofLang } from '$lib/stores/settings.svelte';
@@ -45,6 +48,28 @@
     await logout();
     toasts.success('Logget ut');
     open = false;
+  }
+
+  let appVersion = $state('');
+  let checking = $state(false);
+
+  onMount(async () => {
+    if (!inTauri) return;
+    try {
+      const { getVersion } = await import('@tauri-apps/api/app');
+      appVersion = await getVersion();
+    } catch {
+      /* ignore */
+    }
+  });
+
+  async function lookForUpdate() {
+    checking = true;
+    try {
+      await checkForUpdate();
+    } finally {
+      checking = false;
+    }
   }
 </script>
 
@@ -193,4 +218,22 @@
       <p class="text-[12px] text-ink-faint">Ikke innlogget. Faner lagres bare lokalt.</p>
     {/if}
   </section>
+
+  {#if inTauri}
+    <section class="space-y-2 border-t border-border pt-4">
+      <h3 class="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">Om NotaB!</h3>
+      <div class="flex items-center justify-between">
+        <span class="text-[13px] text-ink-soft">
+          Versjon <b class="text-ink">{appVersion || '–'}</b>
+        </span>
+        <button
+          class="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-ink-soft hover:bg-surface-sunken disabled:opacity-40"
+          disabled={checking}
+          onclick={lookForUpdate}
+        >
+          {checking ? 'Ser etter…' : 'Se etter oppdateringer'}
+        </button>
+      </div>
+    </section>
+  {/if}
 </Modal>

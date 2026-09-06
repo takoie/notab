@@ -33,6 +33,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -44,5 +45,12 @@
       "debugApplicationIdSuffix": ".debug"
     }
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/takoie/notab/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCQjUxQzA2MkI1OUYyNjYKUldSbThsa3JCaHkxdTQ5MmZIbkZaeEs5RWF6VHlIbnVScUptMW1yOThyYzl0OW05U0pLRXNwQ1YK"
+    }
+  }
 }
