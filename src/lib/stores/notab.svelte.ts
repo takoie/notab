@@ -26,6 +26,7 @@ function freshTab(name: string, orderKey: string): Tab {
     ownerId: session.userId,
     shareCode: null,
     joined: false,
+    archived: false,
     createdAt: t,
     updatedAt: t,
     deleted: false,
@@ -75,8 +76,14 @@ class NotabStore {
 
   visibleTabs = $derived(
     this.tabs
-      .filter((t) => !t.deleted)
+      .filter((t) => !t.deleted && !t.archived)
       .sort((a, b) => (a.orderKey < b.orderKey ? -1 : a.orderKey > b.orderKey ? 1 : 0)),
+  );
+
+  archivedTabs = $derived(
+    this.tabs
+      .filter((t) => !t.deleted && t.archived)
+      .sort((a, b) => b.updatedAt - a.updatedAt),
   );
 
   activeTab = $derived(this.visibleTabs.find((t) => t.id === this.activeTabId) ?? null);
@@ -144,7 +151,7 @@ class NotabStore {
     this.tabs = tabs;
     this.notes = notes;
     this.#byId = new Map(notes.map((n) => [n.id, n]));
-    if (this.activeTabId && !tabs.some((t) => t.id === this.activeTabId && !t.deleted)) {
+    if (this.activeTabId && !this.visibleTabs.some((t) => t.id === this.activeTabId)) {
       this.activeTabId = this.visibleTabs[0]?.id ?? null;
     }
   }
@@ -238,6 +245,20 @@ class NotabStore {
     const tab = this.getTab(id);
     if (!tab) return;
     await this.#commitTab({ ...tab, color });
+  }
+
+  async archiveTab(id: string) {
+    const tab = this.getTab(id);
+    if (!tab || tab.archived) return;
+    await this.#commitTab({ ...tab, archived: true });
+    if (this.activeTabId === id) this.activeTabId = this.visibleTabs[0]?.id ?? null;
+  }
+
+  async unarchiveTab(id: string) {
+    const tab = this.getTab(id);
+    if (!tab || !tab.archived) return;
+    await this.#commitTab({ ...tab, archived: false });
+    this.activeTabId = id;
   }
 
   async deleteTab(id: string) {

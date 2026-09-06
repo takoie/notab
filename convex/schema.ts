@@ -35,6 +35,9 @@ export default defineSchema({
     color: v.union(v.string(), v.null()),
     sortMode,
     orderKey: v.string(),
+    // optional so an existing deployment doesn't need a migration; the client
+    // always sends it and sync.ts defaults it on read.
+    archived: v.optional(v.boolean()),
     ownerId: v.id('users'),
     shareCode: v.union(v.string(), v.null()),
     createdAt: v.number(),

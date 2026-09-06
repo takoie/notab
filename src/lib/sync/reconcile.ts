@@ -61,6 +61,7 @@ export interface WireTab {
   color: string | null;
   sortMode: Tab['sortMode'];
   orderKey: string;
+  archived: boolean;
   deleted: boolean;
   clientUpdatedAt: number;
 }
@@ -91,6 +92,7 @@ export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
     color: t.color,
     sortMode: t.sortMode,
     orderKey: t.orderKey,
+    archived: t.archived,
     deleted: t.deleted,
     clientUpdatedAt: t.updatedAt,
   };

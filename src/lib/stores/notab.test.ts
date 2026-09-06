@@ -79,6 +79,33 @@ describe('NotabStore — local core', () => {
     expect(ops.some((o) => o.type === 'upsertNote')).toBe(true);
   });
 
+  it('archives a tab: hidden from the bar, listed in archive, selection moves', async () => {
+    const t1 = await notab.createTab('Keep');
+    const t2 = await notab.createTab('Shelve');
+    expect(notab.activeTabId).toBe(t2.id);
+    await notab.archiveTab(t2.id);
+    expect(notab.visibleTabs.map((t) => t.name)).toEqual(['Keep']);
+    expect(notab.archivedTabs.map((t) => t.name)).toEqual(['Shelve']);
+    expect(notab.activeTabId).toBe(t1.id);
+  });
+
+  it('unarchives a tab back into the bar and selects it', async () => {
+    const t = await notab.createTab('Shelve');
+    await notab.archiveTab(t.id);
+    await notab.unarchiveTab(t.id);
+    expect(notab.visibleTabs.map((x) => x.name)).toContain('Shelve');
+    expect(notab.archivedTabs).toHaveLength(0);
+    expect(notab.activeTabId).toBe(t.id);
+  });
+
+  it('carries the archived flag onto the sync wire payload', async () => {
+    const t = await notab.createTab('X');
+    await notab.archiveTab(t.id);
+    const ops = await allOps();
+    const last = ops.filter((o) => o.type === 'upsertTab').at(-1);
+    expect(last?.payload.archived).toBe(true);
+  });
+
   it('pins and unpins a note without a tombstone', async () => {
     const tab = await notab.createTab('X');
     const a = await notab.addNote(tab.id, 'A');

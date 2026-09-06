@@ -10,6 +10,9 @@ const tabOp = v.object({
   color: v.union(v.string(), v.null()),
   sortMode,
   orderKey: v.string(),
+  // optional for one upgrade cycle: outbox ops queued before the client knew
+  // about `archived` won't carry it. Defaulted to false on apply.
+  archived: v.optional(v.boolean()),
   deleted: v.boolean(),
   clientUpdatedAt: v.number(),
 });
@@ -58,6 +61,7 @@ export const pushOps = mutation({
             color: op.color,
             sortMode: op.sortMode,
             orderKey: op.orderKey,
+            archived: op.archived ?? false,
             ownerId: userId,
             shareCode: null,
             createdAt: now,
@@ -79,6 +83,7 @@ export const pushOps = mutation({
           color: op.color,
           sortMode: op.sortMode,
           orderKey: op.orderKey,
+          archived: op.archived ?? false,
           deleted: op.deleted,
           updatedAt: now,
         });
@@ -164,6 +169,7 @@ export const pullTab = query({
             color: tabDoc.color,
             sortMode: tabDoc.sortMode,
             orderKey: tabDoc.orderKey,
+            archived: tabDoc.archived ?? false,
             ownerId: tabDoc.ownerId,
             shareCode: tabDoc.ownerId === userId ? tabDoc.shareCode : null,
             deleted: tabDoc.deleted,

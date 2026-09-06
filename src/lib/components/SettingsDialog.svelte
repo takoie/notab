@@ -5,7 +5,9 @@
   import { session } from '$lib/stores/session.svelte';
   import { logout } from '$lib/auth';
   import { isValidPin } from '$lib/crypto';
+  import { notab } from '$lib/stores/notab.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
+  import { RotateCcw, Trash2 } from '@lucide/svelte';
   import type { ThemePref } from '$lib/stores/theme.svelte';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
@@ -128,6 +130,35 @@
       </button>
     {/if}
   </section>
+
+  {#if notab.archivedTabs.length > 0}
+    <section class="space-y-2 border-t border-border pt-4">
+      <h3 class="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">Arkiv</h3>
+      <ul class="space-y-1">
+        {#each notab.archivedTabs as t (t.id)}
+          <li class="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
+            {#if t.color}
+              <span class="h-2.5 w-2.5 shrink-0 rounded-full" style:background-color={t.color}
+              ></span>
+            {/if}
+            <span class="flex-1 truncate text-[13px] text-ink">{t.name}</span>
+            <button
+              class="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-ink-soft hover:bg-surface-sunken hover:text-ink"
+              onclick={() => notab.unarchiveTab(t.id)}
+            >
+              <RotateCcw size={13} /> Gjenopprett
+            </button>
+            <button
+              class="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-ink-faint hover:text-danger"
+              onclick={() => notab.deleteTab(t.id)}
+            >
+              <Trash2 size={13} /> Slett
+            </button>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 
   <section class="space-y-2 border-t border-border pt-4">
     <h3 class="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">Konto</h3>

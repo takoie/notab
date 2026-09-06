@@ -20,6 +20,8 @@ export interface Tab {
   shareCode: string | null;
   /** true when this device joined someone else's shared tab */
   joined: boolean;
+  /** archived tabs are hidden from the tab bar but kept for restore */
+  archived: boolean;
   createdAt: number;
   updatedAt: number;
   deleted: boolean;

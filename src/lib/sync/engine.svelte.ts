@@ -214,6 +214,7 @@ function remoteToTab(
     ownerId: (r.ownerId as string | null) ?? prev?.ownerId ?? null,
     shareCode: (r.shareCode as string | null) ?? null,
     joined,
+    archived: (r.archived as boolean | undefined) ?? prev?.archived ?? false,
     createdAt: prev?.createdAt ?? r.updatedAt,
     updatedAt: r.updatedAt,
     deleted: r.deleted,

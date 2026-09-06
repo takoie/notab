@@ -6,6 +6,7 @@
     Share2,
     Pin,
     LogOut,
+    Archive,
     ChevronsDownUp,
     ChevronsUpDown,
   } from '@lucide/svelte';
@@ -16,9 +17,12 @@
   import { focusOnMount } from '$lib/actions/focus';
   import { toasts } from '$lib/stores/toasts.svelte';
   import SortMenu from './SortMenu.svelte';
+  import Popover from './ui/Popover.svelte';
+  import MenuItem from './ui/MenuItem.svelte';
 
   let { tab, onShare }: { tab: Tab; onShare: () => void } = $props();
 
+  let menuTrigger = $state<HTMLButtonElement | undefined>();
   let menuOpen = $state(false);
   let renaming = $state(false);
   let draft = $state('');
@@ -30,6 +34,12 @@
     if (draft.trim() && draft.trim() !== tab.name) await notab.renameTab(tab.id, draft.trim());
   }
 
+  function beginRename() {
+    menuOpen = false;
+    draft = tab.name;
+    renaming = true;
+  }
+
   async function remove() {
     menuOpen = false;
     if (tab.joined) {
@@ -38,6 +48,12 @@
     } else {
       await notab.deleteTab(tab.id);
     }
+  }
+
+  async function archive() {
+    menuOpen = false;
+    await notab.archiveTab(tab.id);
+    toasts.success('Fane arkivert — se Innstillinger for å hente den tilbake');
   }
 
   async function pinTab() {
@@ -61,10 +77,7 @@
   {:else}
     <button
       class="flex-1 truncate text-left text-[14px] font-semibold text-ink"
-      ondblclick={() => {
-        draft = tab.name;
-        renaming = true;
-      }}
+      ondblclick={beginRename}
     >
       {tab.name}
     </button>
@@ -92,56 +105,42 @@
     <Share2 size={15} />
   </button>
 
-  <div class="relative">
-    <button
-      class="grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
-      onclick={() => (menuOpen = !menuOpen)}
-    >
-      <MoreHorizontal size={16} />
-    </button>
-    {#if menuOpen}
-      <button class="fixed inset-0 z-10" aria-label="Lukk" onclick={() => (menuOpen = false)}
-      ></button>
-      <div
-        class="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-border bg-surface-raised p-1 shadow-pop"
-      >
+  <button
+    bind:this={menuTrigger}
+    class="grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
+    aria-label="Flere valg"
+    onclick={() => (menuOpen = !menuOpen)}
+  >
+    <MoreHorizontal size={16} />
+  </button>
+
+  <Popover anchor={menuTrigger} bind:open={menuOpen} placement="bottom-end" label="Fanevalg" class="w-52">
+    <MenuItem icon={Pencil} onclick={beginRename}>Gi nytt navn</MenuItem>
+    <MenuItem icon={Pin} onclick={pinTab}>Fest fane som popup</MenuItem>
+
+    <div class="flex items-center gap-1.5 px-2.5 py-2">
+      {#each COLORS as c (c ?? 'none')}
         <button
-          class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-ink hover:bg-surface-sunken"
+          class="grid h-5 w-5 place-items-center rounded-full border border-border transition-transform hover:scale-110"
+          class:ring-2={tab.color === c}
+          class:ring-accent={tab.color === c}
+          class:ring-offset-1={tab.color === c}
+          class:ring-offset-surface-raised={tab.color === c}
+          style:background-color={c ?? 'transparent'}
+          aria-label={c ? `Farge ${c}` : 'Ingen farge'}
           onclick={() => {
+            void notab.setTabColor(tab.id, c);
             menuOpen = false;
-            draft = tab.name;
-            renaming = true;
           }}
         >
-          <Pencil size={14} /> Gi nytt navn
+          {#if c === null}<span class="text-[11px] leading-none text-ink-faint">×</span>{/if}
         </button>
-        <button
-          class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-ink hover:bg-surface-sunken"
-          onclick={pinTab}
-        >
-          <Pin size={14} /> Fest fane som popup
-        </button>
-        <div class="flex items-center gap-1.5 px-2.5 py-1.5">
-          {#each COLORS as c}
-            <button
-              class="h-4 w-4 rounded-full border border-border"
-              style:background-color={c ?? 'transparent'}
-              class:ring-2={tab.color === c}
-              class:ring-accent={tab.color === c}
-              aria-label="Farge"
-              onclick={() => notab.setTabColor(tab.id, c)}
-            >
-              {#if c === null}<span class="text-[10px] text-ink-faint">×</span>{/if}
-            </button>
-          {/each}
-        </div>
-        <button
-          class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-danger hover:bg-danger/10"
-          onclick={remove}
-        >
-          {#if tab.joined}<LogOut size={14} /> Forlat fane{:else}<Trash2 size={14} /> Slett fane{/if}
-        </button>
-      </div>
-    {/if}
-  </div>
+      {/each}
+    </div>
+
+    <MenuItem icon={Archive} onclick={archive}>Arkiver</MenuItem>
+    <MenuItem icon={tab.joined ? LogOut : Trash2} danger onclick={remove}>
+      {tab.joined ? 'Forlat fane' : 'Slett fane'}
+    </MenuItem>
+  </Popover>
 </div>
