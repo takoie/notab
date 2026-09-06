@@ -12,7 +12,7 @@ async fn open_pinned_window(
   width: Option<f64>,
   height: Option<f64>,
 ) -> Result<(), String> {
-  if kind != "note" && kind != "tab" {
+  if kind != "note" && kind != "tab" && kind != "board" {
     return Err("invalid kind".into());
   }
   let label = pin_label(&kind, &id);
@@ -29,10 +29,15 @@ async fn open_pinned_window(
     urlencode(&id)
   );
 
+  let (def_w, def_h) = if kind == "board" {
+    (380.0, 520.0)
+  } else {
+    (300.0, 380.0)
+  };
   let mut builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App(url.into()))
     .title(title)
-    .inner_size(width.unwrap_or(300.0), height.unwrap_or(380.0))
-    .min_inner_size(220.0, 160.0)
+    .inner_size(width.unwrap_or(def_w), height.unwrap_or(def_h))
+    .min_inner_size(240.0, 200.0)
     .always_on_top(true)
     .decorations(false)
     .skip_taskbar(true)

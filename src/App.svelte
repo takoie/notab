@@ -12,8 +12,10 @@
   import Toasts from '$lib/components/Toasts.svelte';
   import ImageLightbox from '$lib/components/ImageLightbox.svelte';
   import SyncStatus from '$lib/components/SyncStatus.svelte';
+  import CalendarView from '$lib/components/calendar/CalendarView.svelte';
 
   import { theme } from '$lib/stores/theme.svelte';
+  import { view } from '$lib/stores/view.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { session } from '$lib/stores/session.svelte';
   import { lock } from '$lib/stores/lock.svelte';
@@ -30,6 +32,7 @@
   onMount(async () => {
     theme.init();
     settings.init();
+    view.init();
     session.load();
     await notab.init();
     await lock.init();
@@ -56,39 +59,43 @@
   {:else if showAuth}
     <AuthView onDone={finishAuth} />
   {:else}
-    <TabBar onShare={() => (shareOpen = true)} />
+    {#if view.mode === 'calendar'}
+      <CalendarView />
+    {:else}
+      <TabBar onShare={() => (shareOpen = true)} />
 
-    <main class="flex min-h-0 flex-1 flex-col">
-      {#if notab.activeTab}
-        {#key notab.activeTab.id}
-          <NoteComposer tabId={notab.activeTab.id} tabName={notab.activeTab.name} />
-          <div class="flex justify-end px-4 pb-1">
-            <SortMenu
-              value={notab.activeTab.sortMode}
-              onChange={(m) => notab.activeTab && notab.setSortMode(notab.activeTab.id, m)}
-            />
-          </div>
-          <NoteList tab={notab.activeTab} />
-        {/key}
-      {:else}
-        <div class="grid flex-1 place-items-center p-8 text-center">
-          <div class="space-y-3">
-            <div
-              class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent"
-            >
-              <NotebookPen size={22} />
+      <main class="flex min-h-0 flex-1 flex-col">
+        {#if notab.activeTab}
+          {#key notab.activeTab.id}
+            <NoteComposer tabId={notab.activeTab.id} tabName={notab.activeTab.name} />
+            <div class="flex justify-end px-4 pb-1">
+              <SortMenu
+                value={notab.activeTab.sortMode}
+                onChange={(m) => notab.activeTab && notab.setSortMode(notab.activeTab.id, m)}
+              />
             </div>
-            <p class="text-[13px] text-ink-soft">Ingen faner ennå</p>
-            <button
-              class="rounded-xl bg-accent px-4 py-2 text-[13px] font-semibold text-accent-ink"
-              onclick={() => notab.createTab('Å gjøre')}
-            >
-              Lag din første fane
-            </button>
+            <NoteList tab={notab.activeTab} />
+          {/key}
+        {:else}
+          <div class="grid flex-1 place-items-center p-8 text-center">
+            <div class="space-y-3">
+              <div
+                class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent"
+              >
+                <NotebookPen size={22} />
+              </div>
+              <p class="text-[13px] text-ink-soft">Ingen faner ennå</p>
+              <button
+                class="rounded-xl bg-accent px-4 py-2 text-[13px] font-semibold text-accent-ink"
+                onclick={() => notab.createTab('Å gjøre')}
+              >
+                Lag din første fane
+              </button>
+            </div>
           </div>
-        </div>
-      {/if}
-    </main>
+        {/if}
+      </main>
+    {/if}
 
     <footer
       class="flex h-8 shrink-0 items-center justify-between border-t border-border bg-surface px-3"

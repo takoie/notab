@@ -1,5 +1,6 @@
 <script lang="ts">
   import Modal from './ui/Modal.svelte';
+  import Select from './ui/Select.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { session } from '$lib/stores/session.svelte';
@@ -71,15 +72,13 @@
       Korrekturspråk
     </h3>
     <p class="text-[12px] text-ink-soft">Språk for stavekontroll i notatfelt.</p>
-    <select
-      class="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent"
+    <Select
       value={settings.proofLang}
-      onchange={(e) => settings.setProofLang(e.currentTarget.value as ProofLang)}
-    >
-      {#each PROOF_LANGS as l (l.value)}
-        <option value={l.value}>{l.label}</option>
-      {/each}
-    </select>
+      options={PROOF_LANGS}
+      label="Korrekturspråk"
+      class="w-full"
+      onChange={(v) => settings.setProofLang(v as ProofLang)}
+    />
   </section>
 
   <section class="space-y-2 border-t border-border pt-4">

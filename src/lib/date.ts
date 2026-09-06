@@ -38,6 +38,26 @@ export function endOfIsoWeek(ts: number = startOfToday()): number {
   return addDays(ts, 4 - isoDow); // Friday
 }
 
+/**
+ * The 42 days (6 weeks, Monday first) that make up a month grid for `year`/`month`
+ * (month is 0-based). Every entry is epoch ms at local 00:00. The first entry is
+ * the Monday of the week that contains the 1st.
+ */
+export function monthGrid(year: number, month: number): number[] {
+  const first = new Date(year, month, 1);
+  const isoDow = (first.getDay() + 6) % 7; // Mon = 0 … Sun = 6
+  const start = addDays(startOfDay(first), -isoDow);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+const MONTH_TITLE_FMT = new Intl.DateTimeFormat('nb-NO', { month: 'long', year: 'numeric' });
+
+/** e.g. "September 2026" — capitalised month name plus year. */
+export function monthTitle(year: number, month: number): string {
+  const s = MONTH_TITLE_FMT.format(new Date(year, month, 1));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 const DATE_FMT = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });
 
 /** Short label for a due date, e.g. "uke 31" plus the date in the tooltip. */

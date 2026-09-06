@@ -1,9 +1,21 @@
 <script lang="ts">
-  import { Minus, Square, X, Lock, Moon, Sun, Settings } from '@lucide/svelte';
+  import {
+    Minus,
+    Square,
+    X,
+    Lock,
+    Moon,
+    Sun,
+    Settings,
+    NotebookPen,
+    CalendarDays,
+  } from '@lucide/svelte';
   import { windowControls } from '$lib/tauri';
   import { theme } from '$lib/stores/theme.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
+  import { view } from '$lib/stores/view.svelte';
+  import { cn } from '$lib/cn';
   import Logo from './Logo.svelte';
 
   let { onOpenSettings }: { onOpenSettings: () => void } = $props();
@@ -35,6 +47,35 @@
 >
   <Logo class="h-[24px] w-[24px]" />
   <span class="text-[17px] font-bold tracking-[-0.02em] text-ink">NotaB<span class="text-accent">!</span></span>
+
+  <div class="flex-1"></div>
+
+  <div
+    class="no-drag flex items-center gap-0.5 rounded-lg bg-surface-sunken p-0.5 text-[12px] font-medium"
+  >
+    <button
+      class={cn(
+        'flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors',
+        view.mode === 'notes'
+          ? 'bg-surface text-ink shadow-card'
+          : 'text-ink-faint hover:text-ink',
+      )}
+      onclick={() => view.set('notes')}
+    >
+      <NotebookPen size={14} /> Notater
+    </button>
+    <button
+      class={cn(
+        'flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors',
+        view.mode === 'calendar'
+          ? 'bg-surface text-ink shadow-card'
+          : 'text-ink-faint hover:text-ink',
+      )}
+      onclick={() => view.set('calendar')}
+    >
+      <CalendarDays size={14} /> Kalender
+    </button>
+  </div>
 
   <div class="flex-1"></div>
 

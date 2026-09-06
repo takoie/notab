@@ -12,7 +12,7 @@
   import ImageLightbox from '$lib/components/ImageLightbox.svelte';
 
   const params = new URLSearchParams(location.search);
-  const kind = params.get('kind') as 'note' | 'tab' | null;
+  const kind = params.get('kind') as 'note' | 'tab' | 'board' | null;
   const id = params.get('id') ?? '';
 
   let ready = $state(false);
@@ -35,6 +35,27 @@
   const tab = $derived(kind === 'tab' ? notab.tabs.find((t) => t.id === id) : undefined);
   const tabNotes = $derived(kind === 'tab' ? notab.notesForTab(id) : []);
 
+  // board: every pinned note, grouped by its tab
+  const groups = $derived(
+    kind === 'board'
+      ? notab.visibleTabs
+          .map((t) => ({
+            tab: t,
+            notes: notab.pinnedNotes.filter((n) => n.tabId === t.id),
+          }))
+          .filter((g) => g.notes.length > 0)
+      : [],
+  );
+  const boardCount = $derived(kind === 'board' ? notab.pinnedNotes.length : 0);
+
+  const heading = $derived(
+    kind === 'tab'
+      ? (tab?.name ?? 'Fane')
+      : kind === 'board'
+        ? 'Festede notater'
+        : (note?.title ?? 'Notat'),
+  );
+
   const gone = $derived(
     ready &&
       ((kind === 'note' && (!note || note.deleted)) ||
@@ -54,7 +75,9 @@
   >
     <Pin size={12} class="text-accent" />
     <span class="flex-1 truncate text-[11px] font-semibold text-ink">
-      {kind === 'tab' ? (tab?.name ?? 'Fane') : (note?.title ?? 'Notat')}
+      {heading}{#if kind === 'board' && boardCount}<span class="ml-1 text-ink-faint"
+          >· {boardCount}</span
+        >{/if}
     </span>
     <button
       class="no-drag grid h-5 w-5 place-items-center rounded text-ink-faint hover:bg-danger hover:text-white"
@@ -64,7 +87,7 @@
     </button>
   </header>
 
-  <div class="min-h-0 flex-1 overflow-y-auto p-1.5">
+  <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">
     {#if !ready}
       <p class="p-3 text-[12px] text-ink-faint">Laster…</p>
     {:else if gone}
@@ -77,6 +100,26 @@
       {/each}
       {#if tabNotes.length === 0}
         <p class="p-3 text-[12px] text-ink-faint">Ingen notater.</p>
+      {/if}
+    {:else if kind === 'board'}
+      {#each groups as g (g.tab.id)}
+        <div class="flex items-center gap-1.5 px-1.5 pt-1.5 first:pt-0.5">
+          {#if g.tab.color}
+            <span class="h-2 w-2 shrink-0 rounded-full" style:background-color={g.tab.color}
+            ></span>
+          {/if}
+          <span class="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
+            {g.tab.name}
+          </span>
+        </div>
+        {#each g.notes as n (n.id)}
+          <NoteRow note={n} />
+        {/each}
+      {/each}
+      {#if groups.length === 0}
+        <p class="p-3 text-center text-[12px] text-ink-faint">
+          Ingen festede notater ennå. Trykk nålen på et notat for å feste det hit.
+        </p>
       {/if}
     {/if}
   </div>

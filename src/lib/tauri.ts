@@ -44,7 +44,7 @@ export async function startResize(dir: ResizeDir) {
 }
 
 export async function openPinnedWindow(opts: {
-  kind: 'note' | 'tab';
+  kind: 'note' | 'tab' | 'board';
   id: string;
   title: string;
   x?: number;
@@ -64,7 +64,7 @@ export async function openPinnedWindow(opts: {
   await invoke('open_pinned_window', opts);
 }
 
-export async function closePinnedWindow(kind: 'note' | 'tab', id: string) {
+export async function closePinnedWindow(kind: 'note' | 'tab' | 'board', id: string) {
   if (!inTauri) return;
   const { invoke } = await import('@tauri-apps/api/core');
   await invoke('close_pinned_window', { kind, id });

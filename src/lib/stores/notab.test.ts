@@ -34,6 +34,15 @@ describe('NotabStore — local core', () => {
     expect(notab.notesForTab(tab.id)).toHaveLength(0);
   });
 
+  it('keeps an explicit title alongside a separate rich body', async () => {
+    const tab = await notab.createTab('X');
+    const n = await notab.addNote(tab.id, 'Handleliste', {
+      body: '<ul><li>melk</li><li>brød</li></ul>',
+    });
+    expect(n?.title).toBe('Handleliste');
+    expect(n?.body).toContain('<li>brød</li>');
+  });
+
   it('derives the title from a rich body when no title is given', async () => {
     const tab = await notab.createTab('X');
     const n = await notab.addNote(tab.id, '', {
