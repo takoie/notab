@@ -92,7 +92,7 @@
       <div animate:flip={{ duration: flipMs }} class="shrink-0">
         {#if renamingId === tab.id}
           <input
-            class="w-[15ch] rounded-t-[10px] border border-b-0 border-t-[3px] border-border border-t-accent bg-canvas px-3.5 py-2 text-[13px] font-semibold text-ink outline-none ring-1 ring-inset ring-accent/40"
+            class="w-[15ch] rounded-t-[10px] border border-b-0 border-t-[3px] border-border border-t-accent bg-canvas px-3.5 py-1.5 text-[13px] font-medium text-ink outline-none ring-1 ring-inset ring-accent/40"
             bind:value={renameDraft}
             onblur={commitRename}
             onkeydown={(e) => {
@@ -104,18 +104,18 @@
         {:else}
           <button
             class={cn(
-              'group relative -mb-px flex items-center gap-1.5 rounded-t-[10px] border border-b-0 border-t-[3px] text-[13px] transition-all',
+              'group relative -mb-px flex items-center gap-1.5 rounded-t-[10px] border border-b-0 border-t-[3px] px-3.5 py-1.5 text-[13px] font-medium transition-colors',
               isActive
-                ? 'z-10 border-border bg-canvas px-4 py-2 font-semibold text-ink shadow-[0_-3px_8px_-4px_rgb(15_23_42_/_0.18)]'
-                : 'border-transparent px-3.5 py-1.5 font-medium text-ink-faint hover:text-ink-soft',
+                ? 'z-10 border-border bg-canvas text-ink shadow-[0_-3px_8px_-4px_rgb(15_23_42_/_0.18)]'
+                : 'border-transparent text-ink-faint hover:text-ink-soft',
               !isActive && !tab.color && 'hover:bg-surface-sunken',
             )}
             style:border-top-color={isActive
               ? (tab.color ?? 'rgb(var(--c-accent))')
               : tab.color
-                ? tint(tab.color, 45)
+                ? tint(tab.color, 40)
                 : 'transparent'}
-            style:background-color={!isActive && tab.color ? tint(tab.color, 15) : undefined}
+            style:background-color={!isActive && tab.color ? tint(tab.color, 14) : undefined}
             title="Dobbeltklikk for å gi nytt navn"
             onclick={() => (notab.activeTabId = tab.id)}
             oncontextmenu={(e) => openContext(e, tab.id)}
@@ -136,6 +136,13 @@
                 )}>{tab.open}</span
               >
             {/if}
+            <!-- fixed-size active marker at the bottom; never affects layout -->
+            <span
+              class="pointer-events-none absolute bottom-[3px] left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-full transition-colors"
+              style:background-color={isActive
+                ? (tab.color ?? 'rgb(var(--c-accent))')
+                : 'transparent'}
+            ></span>
           </button>
         {/if}
       </div>
