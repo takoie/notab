@@ -1,6 +1,6 @@
 export type Importance = 'none' | 'low' | 'med' | 'high';
 
-export type NoteKind = 'small' | 'large';
+export type NoteKind = 'small' | 'large' | 'divider';
 
 export type SortMode = 'manual' | 'importance' | 'due' | 'done-last';
 

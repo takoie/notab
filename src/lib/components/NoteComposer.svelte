@@ -1,14 +1,17 @@
 <script lang="ts">
-  import { Plus } from '@lucide/svelte';
+  import { Plus, SeparatorHorizontal } from '@lucide/svelte';
   import type { Importance } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
   import { sanitizeHtml, isEmptyHtml } from '$lib/richtext';
   import NoteEditorCard from './NoteEditorCard.svelte';
+  import NewDividerPopover from './NewDividerPopover.svelte';
 
   let { tabId }: { tabId: string; tabName?: string } = $props();
 
   let expanded = $state(false);
+  let dividerBtn = $state<HTMLButtonElement | undefined>();
+  let dividerOpen = $state(false);
   let title = $state('');
   let html = $state('');
   let due = $state<number | null>(null);
@@ -58,12 +61,23 @@
 
 <div class="px-4 py-3">
   {#if !expanded}
-    <button
-      class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
-      onclick={() => (expanded = true)}
-    >
-      <Plus size={16} /> Notat
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+        onclick={() => (expanded = true)}
+      >
+        <Plus size={16} /> Notat
+      </button>
+      <button
+        bind:this={dividerBtn}
+        class="flex items-center gap-1.5 rounded-xl border border-dashed border-border-strong px-3 py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+        title="Ny seksjon"
+        onclick={() => (dividerOpen = !dividerOpen)}
+      >
+        <SeparatorHorizontal size={16} /> Skiller
+      </button>
+    </div>
+    <NewDividerPopover anchor={dividerBtn} {tabId} bind:open={dividerOpen} />
   {:else}
     <NoteEditorCard
       bind:title

@@ -67,7 +67,7 @@ export default defineSchema({
     tabCid: v.string(),
     // optional so an existing deployment doesn't need a migration; the client
     // always sends them and sync.ts defaults them on read.
-    kind: v.optional(v.union(v.literal('small'), v.literal('large'))),
+    kind: v.optional(v.union(v.literal('small'), v.literal('large'), v.literal('divider'))),
     title: v.string(),
     body: v.string(),
     images: v.optional(v.array(v.string())),

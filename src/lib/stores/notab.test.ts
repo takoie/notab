@@ -136,6 +136,49 @@ describe('NotabStore — local core', () => {
     expect(last?.payload.archived).toBe(true);
   });
 
+  it('groups notes into sections by dividers, sorting within each', async () => {
+    const tab = await notab.createTab('X');
+    const a = await notab.addNote(tab.id, 'A');
+    const d = await notab.addDivider(tab.id, 'Senere');
+    const b = await notab.addNote(tab.id, 'B');
+    const c = await notab.addNote(tab.id, 'C');
+    // manual order: A | --Senere-- | B, C
+    const secs = notab.sectionsForTab(tab.id);
+    expect(secs.map((s) => s.divider?.title ?? null)).toEqual([null, 'Senere']);
+    expect(secs[0].notes.map((n) => n.title)).toEqual(['A']);
+    expect(secs[1].notes.map((n) => n.title)).toEqual(['B', 'C']);
+    expect(notab.notesForTab(tab.id).map((n) => n.title)).toEqual(['A', 'B', 'C']);
+    expect(d.kind).toBe('divider');
+    expect(notab.sectionNoteIds(d.id)).toEqual([b!.id, c!.id]);
+    expect(a).toBeTruthy();
+  });
+
+  it('deleting a divider merges its notes into the previous section', async () => {
+    const tab = await notab.createTab('X');
+    await notab.addNote(tab.id, 'A');
+    const d = await notab.addDivider(tab.id, 'S');
+    await notab.addNote(tab.id, 'B');
+    await notab.deleteNote(d.id);
+    const secs = notab.sectionsForTab(tab.id);
+    expect(secs).toHaveLength(1);
+    expect(secs[0].notes.map((n) => n.title)).toEqual(['A', 'B']);
+  });
+
+  it('collapsed section drags as a unit (its notes ride with the divider)', async () => {
+    const tab = await notab.createTab('X');
+    const d1 = await notab.addDivider(tab.id, 'One');
+    const a = await notab.addNote(tab.id, 'A');
+    const d2 = await notab.addDivider(tab.id, 'Two');
+    const b = await notab.addNote(tab.id, 'B');
+    notab.toggleSection(d1.id); // collapse "One" (hides A)
+    // drop zone only shows: d1, d2, B  — user moves d1 to the end
+    await notab.reorderTabItems(tab.id, [d2.id, b!.id, d1.id]);
+    const secs = notab.sectionsForTab(tab.id);
+    expect(secs.map((s) => s.divider?.title)).toEqual(['Two', 'One']);
+    expect(secs[0].notes.map((n) => n.title)).toEqual(['B']);
+    expect(secs[1].notes.map((n) => n.title)).toEqual(['A']);
+  });
+
   it('pins and unpins a note without a tombstone', async () => {
     const tab = await notab.createTab('X');
     const a = await notab.addNote(tab.id, 'A');

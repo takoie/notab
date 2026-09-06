@@ -73,9 +73,12 @@ class NotabStore {
   userNames = $state<Record<string, string>>({});
   /** tabId -> epoch ms we last looked at that tab (local, persisted) */
   lastSeen = $state<Record<string, number>>({});
+  /** divider-note id -> true when that section is folded (local, persisted) */
+  collapsedSections = $state<Record<string, true>>({});
 
   #byId = new Map<string, Note>();
   #lastSeenLoaded = false;
+  #collapsedLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -94,6 +97,9 @@ class NotabStore {
   async init() {
     this.lastSeen = (await local.getMeta<Record<string, number>>('tabLastSeen')) ?? {};
     this.#lastSeenLoaded = true;
+    const folded = (await local.getMeta<string[]>('collapsedSections')) ?? [];
+    this.collapsedSections = Object.fromEntries(folded.map((id) => [id, true as const]));
+    this.#collapsedLoaded = true;
     if (session.userId && session.username) {
       this.userNames = { ...this.userNames, [session.userId]: session.username };
     }
@@ -163,9 +169,94 @@ class NotabStore {
     const tab = this.tabs.find((t) => t.id === tabId);
     const mode: SortMode = tab?.sortMode ?? 'manual';
     return sortNotes(
-      this.notes.filter((n) => n.tabId === tabId && !n.deleted),
+      this.notes.filter((n) => n.tabId === tabId && !n.deleted && n.kind !== 'divider'),
       mode,
     );
+  }
+
+  /* ---------------- sections / dividers ---------------- */
+
+  /** all non-deleted rows of a tab in manual (orderKey) order — notes + dividers */
+  #rowsInOrder(tabId: string): Note[] {
+    return this.notes
+      .filter((n) => n.tabId === tabId && !n.deleted)
+      .sort((a, b) => (a.orderKey < b.orderKey ? -1 : a.orderKey > b.orderKey ? 1 : 0));
+  }
+
+  /**
+   * The tab split into sections by its dividers. The first group has a null
+   * divider (notes before any divider); it is omitted when empty. Notes inside
+   * each group are sorted by the tab's active sort mode.
+   */
+  sectionsForTab(tabId: string): { divider: Note | null; notes: Note[] }[] {
+    const mode: SortMode = this.getTab(tabId)?.sortMode ?? 'manual';
+    const groups: { divider: Note | null; notes: Note[] }[] = [{ divider: null, notes: [] }];
+    for (const row of this.#rowsInOrder(tabId)) {
+      if (row.kind === 'divider') groups.push({ divider: row, notes: [] });
+      else groups[groups.length - 1].notes.push(row);
+    }
+    if (groups[0].divider === null && groups[0].notes.length === 0) groups.shift();
+    for (const g of groups) g.notes = sortNotes(g.notes, mode);
+    return groups;
+  }
+
+  sectionNoteIds(dividerId: string): string[] {
+    const tab = this.#byId.get(dividerId);
+    if (!tab) return [];
+    const rows = this.#rowsInOrder(tab.tabId);
+    const start = rows.findIndex((r) => r.id === dividerId);
+    if (start === -1) return [];
+    const out: string[] = [];
+    for (let i = start + 1; i < rows.length; i++) {
+      if (rows[i].kind === 'divider') break;
+      out.push(rows[i].id);
+    }
+    return out;
+  }
+
+  isSectionCollapsed(dividerId: string): boolean {
+    return this.collapsedSections[dividerId] === true;
+  }
+
+  toggleSection(dividerId: string) {
+    const next = { ...this.collapsedSections };
+    if (next[dividerId]) delete next[dividerId];
+    else next[dividerId] = true;
+    this.collapsedSections = next;
+    if (this.#collapsedLoaded) void local.setMeta('collapsedSections', Object.keys(next));
+  }
+
+  async addDivider(tabId: string, title: string): Promise<Note> {
+    const row = freshNote(tabId, title.trim() || 'Ny seksjon', this.#nextOrderKey(tabId), 'divider');
+    await this.#commitNote(row);
+    return row;
+  }
+
+  /**
+   * Reorder after a manual drag. `orderedIds` is the visible order the drop zone
+   * showed (dividers + notes of expanded sections). Notes of a collapsed section
+   * ride along right after their divider.
+   */
+  async reorderTabItems(tabId: string, orderedIds: string[]) {
+    const rows = this.#rowsInOrder(tabId);
+    const full: string[] = [];
+    const seen = new Set<string>();
+    for (const id of orderedIds) {
+      if (seen.has(id)) continue;
+      full.push(id);
+      seen.add(id);
+      const row = this.#byId.get(id);
+      if (row?.kind === 'divider' && this.isSectionCollapsed(id)) {
+        for (const nid of this.sectionNoteIds(id)) {
+          if (!seen.has(nid)) {
+            full.push(nid);
+            seen.add(nid);
+          }
+        }
+      }
+    }
+    for (const r of rows) if (!seen.has(r.id)) full.push(r.id);
+    await this.reorderNotes(full);
   }
 
   pinnedNotes = $derived(this.notes.filter((n) => n.pinned && !n.deleted));
@@ -292,10 +383,7 @@ class NotabStore {
   /* ---------------- note commands ---------------- */
 
   #nextOrderKey(tabId: string): string {
-    const siblings = this.notesForTab(tabId);
-    const lastKey =
-      [...siblings].sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1)).at(-1)?.orderKey ??
-      null;
+    const lastKey = this.#rowsInOrder(tabId).at(-1)?.orderKey ?? null;
     return orderKeyAfter(lastKey);
   }
 

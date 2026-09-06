@@ -21,7 +21,7 @@ const noteOp = v.object({
   kind: v.literal('note'),
   id: v.string(),
   tabId: v.string(),
-  noteKind: v.union(v.literal('small'), v.literal('large')),
+  noteKind: v.union(v.literal('small'), v.literal('large'), v.literal('divider')),
   title: v.string(),
   body: v.string(),
   images: v.array(v.string()),
