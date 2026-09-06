@@ -18,7 +18,7 @@
  * The private signing key never leaves your machine — the script only reads the
  * path from `.env.release` (gitignored) and hands it to `tauri build` via env.
  */
-import { execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -79,13 +79,28 @@ export function parseEnvFile(text) {
 
 /* ------------------------------- runner -------------------------------- */
 
+// We shell out through a single command *string* (execSync) rather than
+// execFileSync(file, args, { shell: true }) — the latter concatenates args
+// without escaping and Node now warns about it (DEP0190). Quote each arg here.
+function quoteArg(a) {
+  a = String(a);
+  if (a === '') return '""';
+  if (/^[A-Za-z0-9_@%+=:,./\\-]+$/.test(a)) return a;
+  return `"${a.replace(/"/g, '""')}"`; // cmd.exe + POSIX both accept "" for a literal "
+}
+
+function toLine(cmd, args) {
+  return [cmd, ...args.map(quoteArg)].join(' ');
+}
+
 function run(cmd, args, opts = {}) {
-  console.log(`\n$ ${cmd} ${args.join(' ')}`);
-  return execFileSync(cmd, args, { stdio: 'inherit', cwd: ROOT, shell: true, ...opts });
+  const line = toLine(cmd, args);
+  console.log(`\n$ ${line}`);
+  return execSync(line, { stdio: 'inherit', cwd: ROOT, ...opts });
 }
 
 function capture(cmd, args) {
-  return execFileSync(cmd, args, { cwd: ROOT, shell: true, encoding: 'utf8' }).trim();
+  return execSync(toLine(cmd, args), { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
 function fail(msg) {
@@ -210,9 +225,9 @@ async function main() {
   const assets = [join(nsisDir, setupExe), msi && join(msiDir, msi), latestPath].filter(Boolean);
   run('gh', [
     'release', 'create', tag,
-    ...assets.map((a) => `"${a}"`),
-    '--title', `"NotaB! ${tag}"`,
-    '--notes', `"${notes.replace(/"/g, '\\"')}"`,
+    ...assets,
+    '--title', `NotaB! ${tag}`,
+    '--notes', notes,
   ]);
 
   // 8. reconcile the installer's real asset URL (GitHub can rewrite "NotaB!" etc.)
@@ -222,7 +237,7 @@ async function main() {
     console.log(`\nPatching latest.json installer URL →\n  ${realExe.url}`);
     latest.platforms['windows-x86_64'].url = realExe.url;
     writeFileSync(latestPath, JSON.stringify(latest, null, 2));
-    run('gh', ['release', 'upload', tag, `"${latestPath}"`, '--clobber']);
+    run('gh', ['release', 'upload', tag, latestPath, '--clobber']);
   }
 
   console.log(`\n✔ Released ${tag}. Existing installs will see the update toast on next launch.`);
