@@ -34,7 +34,7 @@
       <Lock size={22} />
     </div>
     <div class="space-y-1">
-      <h1 class="text-base font-semibold text-ink">Notab er låst</h1>
+      <h1 class="text-base font-semibold text-ink">NotaB! er låst</h1>
       <p class="text-[12px] text-ink-faint">Skriv inn PIN-koden for å låse opp</p>
     </div>
 

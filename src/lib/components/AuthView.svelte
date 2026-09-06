@@ -35,7 +35,7 @@
       </div>
       <div>
         <h1 class="text-lg font-semibold text-ink">
-          {mode === 'login' ? 'Logg inn på Notab' : 'Lag en Notab-konto'}
+          {mode === 'login' ? 'Logg inn på NotaB!' : 'Lag en NotaB!-konto'}
         </h1>
         <p class="mt-1 text-[12px] text-ink-faint">
           Brukernavn trengs for å dele faner mellom flere.
@@ -48,7 +48,7 @@
         class="rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-[12px] text-ink-soft"
       >
         Convex er ikke satt opp ennå. Kjør <code>npx convex dev</code> for å aktivere konto og
-        deling. Du kan bruke Notab lokalt uten å logge inn.
+        deling. Du kan bruke NotaB! lokalt uten å logge inn.
       </p>
     {/if}
 

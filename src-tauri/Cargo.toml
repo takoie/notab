@@ -1,7 +1,7 @@
 [package]
 name = "notab"
 version = "0.1.0"
-description = "Notab — quick note & todo lists for teachers"
+description = "NotaB! — quick note & todo lists for teachers"
 authors = ["Notab"]
 license = ""
 repository = ""

@@ -4,6 +4,7 @@
   import { theme } from '$lib/stores/theme.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
+  import Logo from './Logo.svelte';
 
   let { onOpenSettings }: { onOpenSettings: () => void } = $props();
 
@@ -12,7 +13,7 @@
       lock.lockNow();
     } else {
       onOpenSettings();
-      toasts.push('Sett en PIN-kode i innstillinger for å låse Notab');
+      toasts.push('Sett en PIN-kode i innstillinger for å låse NotaB!');
     }
   }
 
@@ -30,9 +31,10 @@
 </script>
 
 <header
-  class="drag-region flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface px-2 pl-4 select-none"
+  class="drag-region flex h-11 shrink-0 items-center gap-2 border-b border-border bg-surface px-2 pl-3 select-none"
 >
-  <span class="text-[13px] font-semibold tracking-tight text-ink">Notab</span>
+  <Logo class="h-[22px] w-[22px]" />
+  <span class="text-[13px] font-semibold tracking-tight text-ink">NotaB!</span>
 
   <div class="flex-1"></div>
 
@@ -44,8 +46,8 @@
         : 'text-ink-faint hover:bg-surface-sunken hover:text-ink',
     ].join(' ')}
     title={lock.enabled
-      ? `Lås Notab (auto etter ${lock.idleMinutes} min)`
-      : 'Lås Notab — krever PIN-kode'}
+      ? `Lås NotaB! (auto etter ${lock.idleMinutes} min)`
+      : 'Lås NotaB! — krever PIN-kode'}
     onclick={lockNow}
   >
     <Lock size={15} />

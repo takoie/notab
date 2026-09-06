@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Notab",
+  "productName": "NotaB!",
   "version": "0.1.0",
   "identifier": "no.taknes.notab",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Notab",
+        "title": "NotaB!",
         "width": 1040,
         "height": 720,
         "minWidth": 720,
