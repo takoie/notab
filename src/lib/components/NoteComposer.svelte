@@ -1,97 +1,142 @@
 <script lang="ts">
-  import { Plus, FileText } from '@lucide/svelte';
+  import { Plus, Flag } from '@lucide/svelte';
+  import type { Importance } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
-  import { appendImages, imagesFromClipboard } from '$lib/image';
+  import { appendImages } from '$lib/image';
   import { toasts } from '$lib/stores/toasts.svelte';
+  import { sanitizeHtml, firstLine, isEmptyHtml } from '$lib/richtext';
+  import { cn } from '$lib/cn';
   import DeadlineButton from './DeadlineButton.svelte';
   import ImageStrip from './ImageStrip.svelte';
-  import LargeNoteDialog from './LargeNoteDialog.svelte';
+  import RichEditor from './RichEditor.svelte';
 
-  let { tabId, tabName }: { tabId: string; tabName: string } = $props();
-  let value = $state('');
+  let { tabId }: { tabId: string; tabName?: string } = $props();
+
+  let expanded = $state(false);
+  let html = $state('');
   let due = $state<number | null>(null);
   let images = $state<string[]>([]);
-  let largeOpen = $state(false);
-  let input = $state<HTMLInputElement | null>(null);
+  let importance = $state<Importance>('med');
+  let busy = $state(false);
 
-  // autofocus the field right after a new tab is created
+  const empty = $derived(isEmptyHtml(html) && images.length === 0);
+
+  const IMP_NEXT: Record<Importance, Importance> = { low: 'med', med: 'high', high: 'low' };
+  const IMP_LABEL: Record<Importance, string> = {
+    low: 'Lav prioritet',
+    med: 'Middels prioritet',
+    high: 'Viktig',
+  };
+
+  // expand + focus right after a new tab is created
   $effect(() => {
-    if (input && notab.focusComposerFor === tabId) {
-      input.focus();
+    if (notab.focusComposerFor === tabId) {
+      expanded = true;
       notab.focusComposerFor = null;
     }
   });
 
-  async function onPaste(e: ClipboardEvent) {
-    const files = imagesFromClipboard(e);
-    if (files.length === 0) return;
-    e.preventDefault();
+  function reset() {
+    html = '';
+    due = null;
+    images = [];
+    importance = 'med';
+  }
+
+  function collapse() {
+    reset();
+    expanded = false;
+  }
+
+  async function onImages(files: File[]) {
     const { images: next, rejected } = await appendImages(images, files);
     images = next;
     if (rejected) toasts.error(`${rejected} bilde(r) ble for stort`);
   }
 
-  async function submit() {
-    const text = value.trim();
-    if (!text && images.length === 0) return;
-    const carryDue = due;
-    const carryImgs = images;
-    value = '';
-    due = null;
-    images = [];
-    await notab.addNote(tabId, text, { dueDate: carryDue, images: carryImgs });
-    input?.focus();
-  }
-
-  function onkeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      void submit();
+  async function save() {
+    if (busy || empty) return;
+    busy = true;
+    const body = sanitizeHtml(html);
+    try {
+      await notab.addNote(tabId, firstLine(body), {
+        kind: 'large',
+        body,
+        images,
+        dueDate: due,
+        importance,
+      });
+      collapse();
+    } catch (e) {
+      toasts.error(e instanceof Error ? e.message : 'Kunne ikke lagre notatet');
+    } finally {
+      busy = false;
     }
   }
 </script>
 
-<div class="flex flex-col gap-2 px-4 py-3">
-  <div class="flex items-start gap-2">
-    <div
-      class="flex flex-1 flex-col rounded-xl border border-border bg-surface px-1.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20"
+<div class="px-4 py-3">
+  {#if !expanded}
+    <button
+      class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
+      onclick={() => (expanded = true)}
     >
-      <div class="flex items-center gap-1">
-        <DeadlineButton bind:value={due} />
-        <input
-          bind:this={input}
-          bind:value
-          {onkeydown}
-          onpaste={onPaste}
-          placeholder={`Legg til noe for ${tabName}…`}
-          class="min-w-0 flex-1 bg-transparent px-1.5 py-2 text-[13px] text-ink outline-none placeholder:text-ink-faint"
-        />
-      </div>
+      <Plus size={16} /> Notat
+    </button>
+  {:else}
+    <div class="rounded-xl border border-border bg-surface p-2.5 shadow-card">
+      <RichEditor
+        bind:html
+        autofocus
+        placeholder="Skriv noe å huske …"
+        onsave={save}
+        oncancel={() => {
+          if (empty) collapse();
+        }}
+        onpasteimages={onImages}
+      />
+
       {#if images.length}
-        <div class="px-1.5 pb-2">
+        <div class="mt-2">
           <ImageStrip {images} editable size={44} onchange={(n) => (images = n)} />
         </div>
       {/if}
+
+      <div class="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5">
+        <DeadlineButton bind:value={due} />
+        <button
+          type="button"
+          class={cn(
+            'flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-colors',
+            importance === 'high' && 'bg-[rgb(var(--c-danger)/0.14)] text-danger',
+            importance === 'med' && 'text-warn hover:bg-surface-sunken',
+            importance === 'low' && 'text-ink-faint hover:bg-surface-sunken',
+          )}
+          title={IMP_LABEL[importance]}
+          onclick={() => (importance = IMP_NEXT[importance])}
+        >
+          <Flag size={13} fill={importance === 'low' ? 'none' : 'currentColor'} />
+          {IMP_LABEL[importance]}
+        </button>
+
+        <div class="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg px-3 py-1.5 text-[12px] font-medium text-ink-soft hover:bg-surface-sunken"
+            onclick={collapse}
+          >
+            Avbryt
+          </button>
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[12px] font-semibold text-accent-ink transition-[filter] hover:brightness-105 disabled:opacity-40"
+            disabled={empty || busy}
+            onclick={save}
+          >
+            <Plus size={14} /> Legg til
+          </button>
+        </div>
+      </div>
     </div>
-
-    <button
-      class="flex h-[38px] items-center gap-1.5 rounded-xl border border-border px-3 text-[13px] font-medium text-ink-soft transition-colors hover:border-border-strong hover:bg-surface-sunken hover:text-ink"
-      title="Nytt stort notat med tittel og hoveddel"
-      onclick={() => (largeOpen = true)}
-    >
-      <FileText size={15} />
-      Stort notat
-    </button>
-
-    <button
-      class="flex h-[38px] items-center gap-1.5 rounded-xl bg-accent px-3.5 text-[13px] font-semibold text-accent-ink transition-[filter] hover:brightness-105 disabled:opacity-40"
-      disabled={!value.trim() && images.length === 0}
-      onclick={submit}
-    >
-      <Plus size={15} />
-      Legg til
-    </button>
-  </div>
+  {/if}
 </div>
-
-<LargeNoteDialog bind:open={largeOpen} {tabId} />

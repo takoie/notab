@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { X, Pin } from '@lucide/svelte';
   import { theme } from '$lib/stores/theme.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
   import { notab } from '$lib/stores/notab.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { on } from '$lib/sync/bus';
@@ -18,6 +19,7 @@
 
   onMount(async () => {
     theme.init();
+    settings.init();
     await notab.init();
     await lock.init();
     on((evt) => {
@@ -68,7 +70,7 @@
     {:else if gone}
       <p class="p-3 text-[12px] text-ink-faint">Elementet finnes ikke lenger.</p>
     {:else if kind === 'note' && note}
-      <NoteRow {note} forceOpen />
+      <NoteRow {note} />
     {:else if kind === 'tab' && tab}
       {#each tabNotes as n (n.id)}
         <NoteRow note={n} />

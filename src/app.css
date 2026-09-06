@@ -84,6 +84,61 @@ body {
   background-clip: content-box;
 }
 
+/* rich-text note body — small, deliberate formatting set */
+.rich-body :where(b, strong) {
+  font-weight: 600;
+}
+.rich-body :where(ul, ol) {
+  margin: 0.15rem 0;
+  padding-left: 1.35rem;
+}
+.rich-body ul {
+  list-style: disc;
+}
+.rich-body ol {
+  list-style: decimal;
+}
+.rich-body li {
+  margin: 0.1rem 0;
+}
+.rich-body ul[data-checklist] {
+  list-style: none;
+  padding-left: 1.5rem;
+}
+.rich-body ul[data-checklist] > li {
+  position: relative;
+  cursor: pointer;
+}
+.rich-body ul[data-checklist] > li::before {
+  content: '';
+  position: absolute;
+  left: -1.4rem;
+  top: 0.15em;
+  width: 0.95em;
+  height: 0.95em;
+  border: 1.5px solid rgb(var(--c-border-strong));
+  border-radius: 0.3em;
+}
+.rich-body ul[data-checklist] > li[data-checked] {
+  color: rgb(var(--c-ink-faint));
+  text-decoration: line-through;
+}
+.rich-body ul[data-checklist] > li[data-checked]::before {
+  background: rgb(var(--c-accent));
+  border-color: rgb(var(--c-accent));
+}
+.rich-body ul[data-checklist] > li[data-checked]::after {
+  content: '';
+  position: absolute;
+  left: -1.13rem;
+  top: 0.28em;
+  width: 0.32em;
+  height: 0.55em;
+  border: solid rgb(var(--c-accent-ink));
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 /* shared popover / hover-box — grows out of its anchor */
 @keyframes notab-pop-in {
   from {

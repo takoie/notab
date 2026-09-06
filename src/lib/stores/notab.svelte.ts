@@ -1,6 +1,7 @@
 import type { Importance, Note, OutboxOp, SortMode, Tab } from '../types';
 import { newId } from '../ids';
 import { orderKeyAfter, orderKeyBetween, sortNotes } from '../order';
+import { firstLine } from '../richtext';
 import * as local from '../db/local';
 import { noteToWire, tabToWire } from '../sync/reconcile';
 import { emit, emitCrossOnly, on } from '../sync/bus';
@@ -68,11 +69,8 @@ class NotabStore {
   activeTabId = $state<string | null>(null);
   /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
   focusComposerFor = $state<string | null>(null);
-  /** which large-note drawers are expanded — local per device, persisted in meta */
-  openDrawers = $state<Record<string, true>>({});
 
   #byId = new Map<string, Note>();
-  #drawersLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -89,9 +87,6 @@ class NotabStore {
   activeTab = $derived(this.visibleTabs.find((t) => t.id === this.activeTabId) ?? null);
 
   async init() {
-    const saved = (await local.getMeta<string[]>('openDrawers')) ?? [];
-    this.openDrawers = Object.fromEntries(saved.map((id) => [id, true as const]));
-    this.#drawersLoaded = true;
     await this.reload();
     this.loaded = true;
     if (!this.activeTabId && this.visibleTabs.length) {
@@ -100,50 +95,6 @@ class NotabStore {
     on((evt) => {
       if (evt.kind === 'remote-change') void this.reload();
     });
-  }
-
-  /* ---------------- large-note drawers (local UI state) ---------------- */
-
-  isDrawerOpen(id: string): boolean {
-    return this.openDrawers[id] === true;
-  }
-
-  #persistDrawers() {
-    if (!this.#drawersLoaded) return;
-    void local.setMeta('openDrawers', Object.keys(this.openDrawers));
-  }
-
-  toggleDrawer(id: string) {
-    const next = { ...this.openDrawers };
-    if (next[id]) delete next[id];
-    else next[id] = true;
-    this.openDrawers = next;
-    this.#persistDrawers();
-  }
-
-  setAllDrawers(tabId: string, open: boolean) {
-    const ids = this.notes
-      .filter((n) => n.tabId === tabId && n.kind === 'large' && !n.deleted)
-      .map((n) => n.id);
-    const next = { ...this.openDrawers };
-    for (const id of ids) {
-      if (open) next[id] = true;
-      else delete next[id];
-    }
-    this.openDrawers = next;
-    this.#persistDrawers();
-  }
-
-  largeNoteCount(tabId: string): number {
-    return this.notes.filter((n) => n.tabId === tabId && n.kind === 'large' && !n.deleted)
-      .length;
-  }
-
-  allDrawersOpen(tabId: string): boolean {
-    const large = this.notes.filter(
-      (n) => n.tabId === tabId && n.kind === 'large' && !n.deleted,
-    );
-    return large.length > 0 && large.every((n) => this.openDrawers[n.id] === true);
   }
 
   async reload() {
@@ -307,21 +258,26 @@ class NotabStore {
       body?: string;
     } = {},
   ): Promise<Note | null> {
-    const trimmed = title.trim();
+    const body = opts.body ?? '';
     const images = opts.images ?? [];
-    // a note needs at least a title or an image
+    const trimmed = title.trim() || firstLine(body);
+    // a note needs text (title or body) or at least an image
     if (!trimmed && images.length === 0) return null;
-    const note = freshNote(tabId, trimmed || 'Bilde', this.#nextOrderKey(tabId), opts.kind);
+    const note = freshNote(
+      tabId,
+      trimmed || 'Bilde',
+      this.#nextOrderKey(tabId),
+      opts.kind ?? 'large',
+    );
     if (opts.dueDate !== undefined) note.dueDate = opts.dueDate;
     if (opts.importance) note.importance = opts.importance;
-    if (opts.body) note.body = opts.body;
+    note.body = body;
     note.images = images;
     await this.#commitNote(note);
-    if (note.kind === 'large') this.openDrawers = { ...this.openDrawers, [note.id]: true };
     return note;
   }
 
-  /** Create a large (title + body) note, drawer starts open for the author. */
+  /** Create a note that starts life with a formatted body. */
   async addLargeNote(
     tabId: string,
     data: {

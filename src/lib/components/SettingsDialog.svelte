@@ -6,9 +6,11 @@
   import { logout } from '$lib/auth';
   import { isValidPin } from '$lib/crypto';
   import { notab } from '$lib/stores/notab.svelte';
+  import { settings, PROOF_LANGS } from '$lib/stores/settings.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
   import { RotateCcw, Trash2 } from '@lucide/svelte';
   import type { ThemePref } from '$lib/stores/theme.svelte';
+  import type { ProofLang } from '$lib/stores/settings.svelte';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -62,6 +64,22 @@
         </button>
       {/each}
     </div>
+  </section>
+
+  <section class="space-y-2 border-t border-border pt-4">
+    <h3 class="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
+      Korrekturspråk
+    </h3>
+    <p class="text-[12px] text-ink-soft">Språk for stavekontroll i notatfelt.</p>
+    <select
+      class="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent"
+      value={settings.proofLang}
+      onchange={(e) => settings.setProofLang(e.currentTarget.value as ProofLang)}
+    >
+      {#each PROOF_LANGS as l (l.value)}
+        <option value={l.value}>{l.label}</option>
+      {/each}
+    </select>
   </section>
 
   <section class="space-y-2 border-t border-border pt-4">

@@ -34,6 +34,21 @@ describe('NotabStore — local core', () => {
     expect(notab.notesForTab(tab.id)).toHaveLength(0);
   });
 
+  it('derives the title from a rich body when no title is given', async () => {
+    const tab = await notab.createTab('X');
+    const n = await notab.addNote(tab.id, '', {
+      body: '<p>Ring <b>rørlegger</b></p><p>før fredag</p>',
+    });
+    expect(n?.title).toBe('Ring rørlegger');
+    expect(n?.body).toContain('<b>rørlegger</b>');
+  });
+
+  it('rejects a note with an empty body and no images', async () => {
+    const tab = await notab.createTab('X');
+    const n = await notab.addNote(tab.id, '', { body: '<p><br></p>' });
+    expect(n).toBeNull();
+  });
+
   it('toggles done and reflects it in done-last sorting', async () => {
     const tab = await notab.createTab('X');
     await notab.setSortMode(tab.id, 'done-last');

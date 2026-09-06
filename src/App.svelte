@@ -14,6 +14,7 @@
   import SyncStatus from '$lib/components/SyncStatus.svelte';
 
   import { theme } from '$lib/stores/theme.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
   import { session } from '$lib/stores/session.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { notab } from '$lib/stores/notab.svelte';
@@ -28,6 +29,7 @@
 
   onMount(async () => {
     theme.init();
+    settings.init();
     session.load();
     await notab.init();
     await lock.init();
