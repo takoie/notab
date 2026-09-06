@@ -93,10 +93,10 @@
     {:else if gone}
       <p class="p-3 text-[12px] text-ink-faint">Elementet finnes ikke lenger.</p>
     {:else if kind === 'note' && note}
-      <NoteRow {note} />
+      <NoteRow {note} showAuthors={notab.isShared(notab.getTab(note.tabId))} />
     {:else if kind === 'tab' && tab}
       {#each tabNotes as n (n.id)}
-        <NoteRow note={n} />
+        <NoteRow note={n} showAuthors={notab.isShared(tab)} />
       {/each}
       {#if tabNotes.length === 0}
         <p class="p-3 text-[12px] text-ink-faint">Ingen notater.</p>
@@ -113,7 +113,7 @@
           </span>
         </div>
         {#each g.notes as n (n.id)}
-          <NoteRow note={n} />
+          <NoteRow note={n} showAuthors={notab.isShared(g.tab)} />
         {/each}
       {/each}
       {#if groups.length === 0}

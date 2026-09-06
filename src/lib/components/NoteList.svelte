@@ -10,6 +10,7 @@
   const flipMs = 150;
   const notes = $derived(notab.notesForTab(tab.id));
   const manual = $derived(tab.sortMode === 'manual');
+  const showAuthors = $derived(notab.isShared(tab));
 
   let dragging = $state<Note[]>([]);
   const view = $derived(dragging.length ? dragging : notes);
@@ -43,14 +44,14 @@
   >
     {#each view as note (note.id)}
       <div animate:flip={{ duration: flipMs }}>
-        <NoteRow {note} draggable />
+        <NoteRow {note} draggable {showAuthors} />
       </div>
     {/each}
   </div>
 {:else}
   <div class="flex-1 space-y-1.5 overflow-y-auto px-3 py-2.5">
     {#each notes as note (note.id)}
-      <NoteRow {note} />
+      <NoteRow {note} {showAuthors} />
     {/each}
   </div>
 {/if}

@@ -161,6 +161,13 @@ export const pullTab = query({
       )
       .collect();
 
+    // resolve author names once for this batch so every participant can show them
+    const authors: Record<string, string> = {};
+    for (const uid of new Set(notes.map((n) => n.createdBy).filter(Boolean))) {
+      const u = await ctx.db.get(uid as NonNullable<typeof uid>);
+      if (u && 'username' in u) authors[uid as string] = u.username as string;
+    }
+
     const tab =
       tabDoc && tabDoc.updatedAt > args.since
         ? {
@@ -179,6 +186,7 @@ export const pullTab = query({
 
     return {
       tab,
+      authors,
       notes: notes.map((n) => ({
         id: n.cid,
         tabId: n.tabCid,
@@ -190,6 +198,7 @@ export const pullTab = query({
         importance: n.importance,
         dueDate: n.dueDate,
         orderKey: n.orderKey,
+        createdBy: n.createdBy ?? null,
         deleted: n.deleted,
         updatedAt: n.updatedAt,
       })),

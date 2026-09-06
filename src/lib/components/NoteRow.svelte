@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { GripVertical, Pin, PinOff, Trash2, Calendar, ExternalLink } from '@lucide/svelte';
+  import { GripVertical, Pin, PinOff, Trash2, Calendar, ExternalLink, User } from '@lucide/svelte';
   import type { Note, Importance } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
+  import { session } from '$lib/stores/session.svelte';
   import { openPinnedWindow, closePinnedWindow } from '$lib/tauri';
   import { dueLabel, dueTooltip, startOfToday } from '$lib/date';
   import { sanitizeHtml, firstLine, isEmptyHtml } from '$lib/richtext';
@@ -11,7 +12,17 @@
   import RichContent from './RichContent.svelte';
   import NoteEditorCard from './NoteEditorCard.svelte';
 
-  let { note, draggable = false }: { note: Note; draggable?: boolean } = $props();
+  let {
+    note,
+    draggable = false,
+    showAuthors = false,
+  }: { note: Note; draggable?: boolean; showAuthors?: boolean } = $props();
+
+  const authorName = $derived(
+    showAuthors && note.createdBy && note.createdBy !== session.userId
+      ? notab.authorName(note.createdBy)
+      : null,
+  );
 
   let editing = $state(false);
   let titleDraft = $state('');
@@ -160,6 +171,12 @@
               onchange={onChecklistToggle}
             />
           </div>
+        {/if}
+
+        {#if authorName}
+          <span class="mt-1 flex w-fit items-center gap-1 text-[11px] text-ink-faint">
+            <User size={11} />{authorName}
+          </span>
         {/if}
 
         {#if note.dueDate != null}

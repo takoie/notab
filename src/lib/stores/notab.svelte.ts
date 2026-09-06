@@ -69,8 +69,13 @@ class NotabStore {
   activeTabId = $state<string | null>(null);
   /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
   focusComposerFor = $state<string | null>(null);
+  /** userId -> username, filled from sync pulls (for author bylines in shared tabs) */
+  userNames = $state<Record<string, string>>({});
+  /** tabId -> epoch ms we last looked at that tab (local, persisted) */
+  lastSeen = $state<Record<string, number>>({});
 
   #byId = new Map<string, Note>();
+  #lastSeenLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -87,14 +92,59 @@ class NotabStore {
   activeTab = $derived(this.visibleTabs.find((t) => t.id === this.activeTabId) ?? null);
 
   async init() {
+    this.lastSeen = (await local.getMeta<Record<string, number>>('tabLastSeen')) ?? {};
+    this.#lastSeenLoaded = true;
+    if (session.userId && session.username) {
+      this.userNames = { ...this.userNames, [session.userId]: session.username };
+    }
     await this.reload();
     this.loaded = true;
     if (!this.activeTabId && this.visibleTabs.length) {
       this.activeTabId = this.visibleTabs[0].id;
     }
     on((evt) => {
-      if (evt.kind === 'remote-change') void this.reload();
+      if (evt.kind === 'remote-change') {
+        void this.reload().then(() => {
+          if (this.activeTabId) this.markSeen(this.activeTabId);
+        });
+      }
     });
+  }
+
+  /* ---------------- shared-tab activity + authors ---------------- */
+
+  mergeAuthors(map: Record<string, string> | undefined) {
+    if (!map || Object.keys(map).length === 0) return;
+    this.userNames = { ...this.userNames, ...map };
+  }
+
+  authorName(userId: string | null | undefined): string | null {
+    if (!userId) return null;
+    return this.userNames[userId] ?? null;
+  }
+
+  markSeen(tabId: string) {
+    this.lastSeen = { ...this.lastSeen, [tabId]: now() };
+    if (this.#lastSeenLoaded) void local.setMeta('tabLastSeen', this.lastSeen);
+  }
+
+  isShared(tab: Tab | undefined): boolean {
+    return !!tab && (tab.shareCode != null || tab.joined);
+  }
+
+  /** true when a shared, non-active tab has changes newer than our last visit */
+  hasUnread(tabId: string): boolean {
+    if (tabId === this.activeTabId) return false;
+    const tab = this.getTab(tabId);
+    if (!this.isShared(tab)) return false;
+    const seen = this.lastSeen[tabId] ?? 0;
+    return this.notes.some(
+      (n) =>
+        n.tabId === tabId &&
+        !n.deleted &&
+        n.updatedAt > seen &&
+        n.createdBy !== session.userId,
+    );
   }
 
   async reload() {

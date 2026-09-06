@@ -30,6 +30,11 @@
   let settingsOpen = $state(false);
   let shareOpen = $state(false);
 
+  // mark the tab you're looking at as seen (clears its "new" badge)
+  $effect(() => {
+    if (ready && notab.activeTabId) notab.markSeen(notab.activeTabId);
+  });
+
   onMount(async () => {
     theme.init();
     settings.init();

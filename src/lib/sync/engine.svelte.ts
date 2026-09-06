@@ -2,6 +2,7 @@ import type { SyncState, Tab, Note } from '../types';
 import { api } from '../../../convex/_generated/api';
 import { convexConfigured, mutateOnce, queryOnce } from '../convex.svelte';
 import { session } from '../stores/session.svelte';
+import { notab } from '../stores/notab.svelte';
 import * as local from '../db/local';
 import { emit, on } from './bus';
 import {
@@ -162,8 +163,11 @@ class SyncEngine {
       })) as {
         tab: (Versioned & Record<string, unknown>) | null;
         notes: (Versioned & Record<string, unknown>)[];
+        authors?: Record<string, string>;
         serverNow: number;
       };
+
+      notab.mergeAuthors(res.authors);
 
       if (res.tab) {
         const localTab = await local.getTab(entry.id);

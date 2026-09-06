@@ -1,7 +1,7 @@
 <script lang="ts">
   import { dndzone } from 'svelte-dnd-action';
   import { flip } from 'svelte/animate';
-  import { Plus, Share2, MoreHorizontal } from '@lucide/svelte';
+  import { Plus, Share2, MoreHorizontal, MessageSquareDot } from '@lucide/svelte';
   import { notab } from '$lib/stores/notab.svelte';
   import { focusOnMount } from '$lib/actions/focus';
   import { cn } from '$lib/cn';
@@ -17,7 +17,6 @@
       id: t.id,
       name: t.name,
       color: t.color,
-      open: notab.notesForTab(t.id).filter((n) => !n.done).length,
     })),
   );
 
@@ -126,15 +125,12 @@
               ></span>
             {/if}
             <span class="max-w-[16ch] truncate">{tab.name}</span>
-            {#if tab.open > 0}
-              <span
-                class={cn(
-                  'rounded-full px-1.5 text-[11px] tabular-nums',
-                  isActive
-                    ? 'bg-accent/15 text-accent'
-                    : 'bg-surface-sunken text-ink-faint group-hover:bg-border',
-                )}>{tab.open}</span
-              >
+            {#if notab.hasUnread(tab.id)}
+              <MessageSquareDot
+                size={13}
+                class="shrink-0 text-accent"
+                aria-label="Nytt i delt fane"
+              />
             {/if}
             <!-- fixed-size active marker at the bottom; never affects layout -->
             <span
