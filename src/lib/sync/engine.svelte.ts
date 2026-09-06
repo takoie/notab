@@ -232,7 +232,7 @@ function remoteToNote(r: Versioned & Record<string, unknown>, siblings: Note[]):
     body: (r.body as string) ?? '',
     images: (r.images as string[]) ?? prev?.images ?? [],
     done: Boolean(r.done),
-    importance: (r.importance as Note['importance']) ?? 'med',
+    importance: (r.importance as Note['importance']) ?? 'none',
     dueDate: (r.dueDate as number | null) ?? null,
     orderKey: (r.orderKey as string) ?? prev?.orderKey ?? 'a0',
     pinned: prev?.pinned ?? false,

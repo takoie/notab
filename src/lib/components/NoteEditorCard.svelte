@@ -13,7 +13,7 @@
     title = $bindable(''),
     html = $bindable(''),
     due = $bindable(null),
-    importance = $bindable('med'),
+    importance = $bindable('none'),
     images = $bindable([]),
     saveLabel = 'Lagre',
     busy = false,

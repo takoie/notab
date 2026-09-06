@@ -1,7 +1,7 @@
 import type { Importance, Note } from './types';
 import { startOfDay } from './date';
 
-const IMP_RANK: Record<Importance, number> = { high: 0, med: 1, low: 2 };
+const IMP_RANK: Record<Importance, number> = { high: 0, med: 1, low: 2, none: 3 };
 
 /** Order within a single day cell: unfinished first, then importance, then oldest first. */
 export function eventComparator(a: Note, b: Note): number {

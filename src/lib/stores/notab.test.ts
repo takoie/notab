@@ -34,6 +34,12 @@ describe('NotabStore — local core', () => {
     expect(notab.notesForTab(tab.id)).toHaveLength(0);
   });
 
+  it('creates notes with no importance by default', async () => {
+    const tab = await notab.createTab('X');
+    const n = await notab.addNote(tab.id, 'Bare et notat');
+    expect(n?.importance).toBe('none');
+  });
+
   it('keeps an explicit title alongside a separate rich body', async () => {
     const tab = await notab.createTab('X');
     const n = await notab.addNote(tab.id, 'Handleliste', {

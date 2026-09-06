@@ -125,7 +125,13 @@
         {/if}
       </button>
 
-      <div class="mt-0.5 shrink-0">
+      <div
+        class={cn(
+          'mt-0.5 shrink-0',
+          note.importance === 'none' &&
+            'opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100',
+        )}
+      >
         <ImportanceMenu
           value={note.importance}
           compact

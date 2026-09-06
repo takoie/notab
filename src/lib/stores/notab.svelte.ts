@@ -50,7 +50,7 @@ function freshNote(
     body: '',
     images: [],
     done: false,
-    importance: 'med',
+    importance: 'none',
     dueDate: null,
     orderKey,
     pinned: false,

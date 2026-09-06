@@ -29,6 +29,7 @@ const IMPORTANCE_RANK: Record<Note['importance'], number> = {
   high: 0,
   med: 1,
   low: 2,
+  none: 3,
 };
 
 /**

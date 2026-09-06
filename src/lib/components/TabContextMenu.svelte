@@ -21,11 +21,18 @@
   } = $props();
 
   const COLORS: (string | null)[] = [
-    '#6c63e8',
-    '#3ab082',
-    '#e0546c',
-    '#d69e2e',
-    '#4b9fe0',
+    '#6c63e8', // indigo
+    '#8b5cf6', // violet
+    '#4b9fe0', // blue
+    '#0ea5e9', // sky
+    '#14b8a6', // teal
+    '#3ab082', // green
+    '#84cc16', // lime
+    '#d69e2e', // amber
+    '#f97316', // orange
+    '#e0546c', // rose
+    '#ec4899', // pink
+    '#64748b', // slate
     null,
   ];
 
@@ -51,7 +58,7 @@
   }
 </script>
 
-<Popover {anchor} bind:open placement="bottom-start" label="Fanevalg" class="w-52">
+<Popover {anchor} bind:open placement="bottom-start" label="Fanevalg" class="w-56">
   <MenuItem
     icon={Pencil}
     onclick={() => {
@@ -62,7 +69,7 @@
     Gi nytt navn
   </MenuItem>
 
-  <div class="flex items-center gap-1.5 px-2.5 py-2">
+  <div class="flex flex-wrap items-center gap-1.5 px-2.5 py-2">
     {#each COLORS as c (c ?? 'none')}
       <button
         class="grid h-5 w-5 place-items-center rounded-full border border-border transition-transform hover:scale-110"

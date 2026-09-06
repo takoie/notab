@@ -13,7 +13,7 @@
   let html = $state('');
   let due = $state<number | null>(null);
   let images = $state<string[]>([]);
-  let importance = $state<Importance>('med');
+  let importance = $state<Importance>('none');
   let busy = $state(false);
 
   const empty = $derived(
@@ -33,7 +33,7 @@
     html = '';
     due = null;
     images = [];
-    importance = 'med';
+    importance = 'none';
   }
 
   function collapse() {

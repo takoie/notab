@@ -16,11 +16,12 @@
   } = $props();
 
   const OPTS: { key: Importance; label: string; cls: string }[] = [
+    { key: 'none', label: 'Ingen', cls: 'text-ink-faint' },
     { key: 'low', label: 'Lav', cls: 'text-ink-faint' },
     { key: 'med', label: 'Middels', cls: 'text-warn' },
     { key: 'high', label: 'Viktig', cls: 'text-danger' },
   ];
-  const current = $derived(OPTS.find((o) => o.key === value) ?? OPTS[1]);
+  const current = $derived(OPTS.find((o) => o.key === value) ?? OPTS[0]);
 
   let trigger = $state<HTMLButtonElement | undefined>();
   let open = $state(false);
@@ -50,7 +51,7 @@
 >
   <Flag
     size={value === 'high' ? 15 : 14}
-    fill={value === 'low' ? 'none' : 'currentColor'}
+    fill={value === 'low' || value === 'none' ? 'none' : 'currentColor'}
     strokeWidth={2}
   />
   {#if !compact}{current.label}{/if}
@@ -66,7 +67,11 @@
       )}
       onclick={() => pick(o.key)}
     >
-      <Flag size={14} fill={o.key === 'low' ? 'none' : 'currentColor'} strokeWidth={2} />
+      <Flag
+        size={14}
+        fill={o.key === 'low' || o.key === 'none' ? 'none' : 'currentColor'}
+        strokeWidth={2}
+      />
       <span class="flex-1">{o.label}</span>
       {#if o.key === value}<Check size={14} class="text-accent" />{/if}
     </button>

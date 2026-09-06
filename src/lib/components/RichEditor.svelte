@@ -140,6 +140,7 @@
     {#each TOOLS as t (t.cmd)}
       <button
         type="button"
+        tabindex="-1"
         class={cn(
           'grid h-7 w-7 place-items-center rounded-md text-ink-soft hover:bg-surface-sunken hover:text-ink',
           marks[t.key] && 'bg-accent-soft text-accent',
@@ -154,6 +155,7 @@
     <span class="mx-1 h-4 w-px bg-border"></span>
     <button
       type="button"
+      tabindex="-1"
       class="grid h-7 w-7 place-items-center rounded-md text-ink-soft hover:bg-surface-sunken hover:text-ink"
       title="Punktliste"
       onclick={() => exec('insertUnorderedList')}
@@ -162,6 +164,7 @@
     </button>
     <button
       type="button"
+      tabindex="-1"
       class="grid h-7 w-7 place-items-center rounded-md text-ink-soft hover:bg-surface-sunken hover:text-ink"
       title="Nummerert liste"
       onclick={() => exec('insertOrderedList')}
@@ -170,6 +173,7 @@
     </button>
     <button
       type="button"
+      tabindex="-1"
       class="grid h-7 w-7 place-items-center rounded-md text-ink-soft hover:bg-surface-sunken hover:text-ink"
       title="Avkrysningsliste"
       onclick={toggleChecklist}

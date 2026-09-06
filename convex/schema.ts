@@ -1,7 +1,12 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
-export const importance = v.union(v.literal('low'), v.literal('med'), v.literal('high'));
+export const importance = v.union(
+  v.literal('none'),
+  v.literal('low'),
+  v.literal('med'),
+  v.literal('high'),
+);
 export const sortMode = v.union(
   v.literal('manual'),
   v.literal('importance'),

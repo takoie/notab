@@ -1,4 +1,4 @@
-export type Importance = 'low' | 'med' | 'high';
+export type Importance = 'none' | 'low' | 'med' | 'high';
 
 export type NoteKind = 'small' | 'large';
 
