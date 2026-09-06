@@ -4,6 +4,7 @@
   import TabBar from '$lib/components/TabBar.svelte';
   import TabPanelHeader from '$lib/components/TabPanelHeader.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
+  import SortMenu from '$lib/components/SortMenu.svelte';
   import NoteList from '$lib/components/NoteList.svelte';
   import LockScreen from '$lib/components/LockScreen.svelte';
   import AuthView from '$lib/components/AuthView.svelte';
@@ -63,6 +64,12 @@
         {#key notab.activeTab.id}
           <TabPanelHeader tab={notab.activeTab} onShare={() => (shareOpen = true)} />
           <NoteComposer tabId={notab.activeTab.id} tabName={notab.activeTab.name} />
+          <div class="flex justify-end px-4 pb-1">
+            <SortMenu
+              value={notab.activeTab.sortMode}
+              onChange={(m) => notab.activeTab && notab.setSortMode(notab.activeTab.id, m)}
+            />
+          </div>
           <NoteList tab={notab.activeTab} />
         {/key}
       {:else}

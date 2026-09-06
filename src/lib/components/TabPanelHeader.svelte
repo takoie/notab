@@ -14,7 +14,6 @@
   import { openPinnedWindow } from '$lib/tauri';
   import { focusOnMount } from '$lib/actions/focus';
   import { toasts } from '$lib/stores/toasts.svelte';
-  import SortMenu from './SortMenu.svelte';
   import Popover from './ui/Popover.svelte';
   import MenuItem from './ui/MenuItem.svelte';
 
@@ -80,8 +79,6 @@
       {tab.name}
     </button>
   {/if}
-
-  <SortMenu value={tab.sortMode} onChange={(m) => notab.setSortMode(tab.id, m)} />
 
   <button
     class="grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"

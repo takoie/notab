@@ -102,8 +102,7 @@
         </div>
       {/if}
 
-      <div class="mt-2.5 flex items-center gap-2 border-t border-border pt-2.5">
-        <DeadlineButton bind:value={due} />
+      <div class="mt-2.5 flex items-center gap-1 border-t border-border pt-2.5">
         <button
           type="button"
           class={cn(
@@ -118,6 +117,7 @@
           <Flag size={13} fill={importance === 'low' ? 'none' : 'currentColor'} />
           {IMP_LABEL[importance]}
         </button>
+        <DeadlineButton bind:value={due} />
 
         <div class="ml-auto flex items-center gap-2">
           <button

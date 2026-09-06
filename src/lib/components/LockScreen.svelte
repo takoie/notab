@@ -6,23 +6,40 @@
   let pin = $state('');
   let error = $state(false);
   let busy = $state(false);
+  let lastTried = '';
 
-  async function submit() {
-    if (busy || pin.length < 4) return;
+  // Try to unlock as the user types. While `silent`, a wrong PIN shorter than
+  // the 6-digit max is just "not enough digits yet" — no error shown.
+  async function tryUnlock(silent: boolean) {
+    if (busy || pin.length < 4 || pin === lastTried) return;
     busy = true;
-    error = false;
-    const ok = await lock.unlock(pin);
+    const attempt = pin;
+    lastTried = attempt;
+    const ok = await lock.unlock(attempt);
     busy = false;
     if (ok) {
       pin = '';
-    } else {
+      error = false;
+      lastTried = '';
+      return;
+    }
+    if (!silent || attempt.length >= 6) {
       error = true;
       pin = '';
+      lastTried = '';
+    } else if (pin !== lastTried && pin.length >= 4) {
+      // digits arrived while the check was running — catch up
+      void tryUnlock(true);
     }
   }
 
+  function onInput() {
+    error = false;
+    void tryUnlock(true);
+  }
+
   function onkeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') void submit();
+    if (e.key === 'Enter') void tryUnlock(false);
   }
 </script>
 
@@ -48,7 +65,7 @@
       bind:value={pin}
       {onkeydown}
       use:focusOnMount
-      oninput={() => (error = false)}
+      oninput={onInput}
     />
 
     {#if error}
@@ -58,7 +75,7 @@
     <button
       class="w-40 rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-accent-ink disabled:opacity-40"
       disabled={pin.length < 4 || busy}
-      onclick={submit}
+      onclick={() => tryUnlock(false)}
     >
       Lås opp
     </button>

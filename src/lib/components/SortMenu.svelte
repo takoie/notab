@@ -8,7 +8,7 @@
   let { value, onChange }: { value: SortMode; onChange: (m: SortMode) => void } = $props();
 
   const LABELS: Record<SortMode, string> = {
-    manual: 'Manuell (dra og slipp)',
+    manual: 'Manuell',
     importance: 'Viktighet',
     due: 'Forfallsdato',
     'done-last': 'Fullførte nederst',
