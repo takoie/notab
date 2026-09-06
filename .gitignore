@@ -18,6 +18,10 @@ src-tauri/gen/
 ARCHITECTURE_TEMPLATE.md
 AGENTS.md
 
+# internal planning / design notes
+docs/plans/
+docs/superpowers/
+
 # editor
 .vscode/*
 !.vscode/extensions.json
