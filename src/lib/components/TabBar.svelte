@@ -73,7 +73,7 @@
 
 <div class="flex items-end gap-0.5 border-b border-border bg-surface px-2 pt-1.5">
   <div
-    class="flex flex-1 items-end gap-0.5 overflow-x-auto"
+    class="flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden"
     use:dndzone={{ items: view, flipDurationMs: flipMs, type: 'tabs' }}
     onconsider={handleConsider}
     onfinalize={handleFinalize}

@@ -1,7 +1,6 @@
 <script lang="ts">
   import Popover from './ui/Popover.svelte';
   import { notab } from '$lib/stores/notab.svelte';
-  import { focusOnMount } from '$lib/actions/focus';
 
   let {
     anchor,
@@ -9,10 +8,22 @@
   }: { anchor: HTMLElement | undefined; open?: boolean } = $props();
 
   let name = $state('');
+  let inputEl = $state<HTMLInputElement | undefined>();
 
   function reset() {
     name = '';
   }
+
+  // focus + select the field as soon as the box opens — no click needed
+  $effect(() => {
+    if (!open) return;
+    const el = inputEl;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.select();
+    });
+  });
 
   async function submit() {
     const n = name.trim();
@@ -40,10 +51,10 @@
   >
     <span class="block text-[12px] font-semibold text-ink-soft">Navn på ny fane</span>
     <input
+      bind:this={inputEl}
       class="w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent"
       placeholder="F.eks. Prosjekt X"
       bind:value={name}
-      use:focusOnMount={true}
     />
     <div class="flex justify-end gap-2">
       <button
