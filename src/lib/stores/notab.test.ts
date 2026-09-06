@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { notab } from './notab.svelte';
-import { _resetForTests, allOps } from '../db/local';
+import { _resetForTests, allOps, getMeta } from '../db/local';
 
 beforeEach(async () => {
   await _resetForTests();
@@ -143,5 +143,26 @@ describe('NotabStore — local core', () => {
     expect(notab.pinnedNotes.map((n) => n.id)).toEqual([a!.id]);
     await notab.setPinned(a!.id, false);
     expect(notab.pinnedNotes).toHaveLength(0);
+  });
+});
+
+describe('NotabStore — markSeen / unread badge', () => {
+  beforeEach(async () => {
+    await _resetForTests();
+    await notab.init(); // sets #lastSeenLoaded so markSeen persists
+  });
+
+  it('persists a proxy-free snapshot to meta (no IndexedDB DataCloneError)', async () => {
+    const tab = await notab.createTab('Delt');
+    notab.markSeen(tab.id);
+    await new Promise((r) => setTimeout(r, 0)); // let the void setMeta settle
+    const stored = await getMeta<Record<string, number>>('tabLastSeen');
+    expect(typeof stored?.[tab.id]).toBe('number');
+  });
+
+  it('is not its own last-write dependency: repeated calls stay bounded', async () => {
+    const tab = await notab.createTab('Delt');
+    for (let i = 0; i < 5; i++) notab.markSeen(tab.id);
+    expect(Object.keys(notab.lastSeen)).toEqual([tab.id]);
   });
 });

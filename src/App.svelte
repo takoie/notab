@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import TitleBar from '$lib/components/TitleBar.svelte';
   import TabBar from '$lib/components/TabBar.svelte';
   import NoteComposer from '$lib/components/NoteComposer.svelte';
@@ -30,9 +30,12 @@
   let settingsOpen = $state(false);
   let shareOpen = $state(false);
 
-  // mark the tab you're looking at as seen (clears its "new" badge)
+  // mark the tab you're looking at as seen (clears its "new" badge).
+  // untrack the call: markSeen reads *and* writes notab.lastSeen, so without
+  // this the effect would depend on the value it just changed and loop forever.
   $effect(() => {
-    if (ready && notab.activeTabId) notab.markSeen(notab.activeTabId);
+    const id = notab.activeTabId;
+    if (ready && id) untrack(() => notab.markSeen(id));
   });
 
   onMount(async () => {

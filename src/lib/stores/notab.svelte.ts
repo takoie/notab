@@ -124,8 +124,10 @@ class NotabStore {
   }
 
   markSeen(tabId: string) {
-    this.lastSeen = { ...this.lastSeen, [tabId]: now() };
-    if (this.#lastSeenLoaded) void local.setMeta('tabLastSeen', this.lastSeen);
+    const next = { ...$state.snapshot(this.lastSeen), [tabId]: now() };
+    this.lastSeen = next;
+    // persist a proxy-free copy — IndexedDB cannot structured-clone a $state proxy
+    if (this.#lastSeenLoaded) void local.setMeta('tabLastSeen', { ...next });
   }
 
   isShared(tab: Tab | undefined): boolean {
