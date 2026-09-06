@@ -13,7 +13,10 @@ dist/
 # tauri / rust
 src-tauri/target/
 src-tauri/gen/
+
+# scaffolding / generated docs — not part of the product, regenerate as needed
 ARCHITECTURE_TEMPLATE.md
+AGENTS.md
 
 # editor
 .vscode/*
