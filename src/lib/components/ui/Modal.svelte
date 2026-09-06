@@ -6,15 +6,19 @@
     title,
     open = $bindable(false),
     onclose,
+    size = 'md',
     children,
     footer,
   }: {
     title: string;
     open?: boolean;
     onclose?: () => void;
+    size?: 'md' | 'lg';
     children: Snippet;
     footer?: Snippet;
   } = $props();
+
+  const maxW = { md: 'max-w-md', lg: 'max-w-2xl' };
 
   function close() {
     open = false;
@@ -36,7 +40,7 @@
       onclick={close}
     ></button>
     <div
-      class="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface-raised p-5 shadow-pop"
+      class="relative z-10 w-full {maxW[size]} rounded-2xl border border-border bg-surface-raised p-5 shadow-pop"
       role="dialog"
       aria-modal="true"
       aria-label={title}

@@ -167,7 +167,7 @@ describe('NotabStore — local core', () => {
   it('collapsed section drags as a unit (its notes ride with the divider)', async () => {
     const tab = await notab.createTab('X');
     const d1 = await notab.addDivider(tab.id, 'One');
-    const a = await notab.addNote(tab.id, 'A');
+    await notab.addNote(tab.id, 'A');
     const d2 = await notab.addDivider(tab.id, 'Two');
     const b = await notab.addNote(tab.id, 'B');
     notab.toggleSection(d1.id); // collapse "One" (hides A)

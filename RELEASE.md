@@ -21,7 +21,9 @@ Skriptet ([`scripts/release.mjs`](scripts/release.mjs)) gjør alt:
 
 1. Sjekker at git er rent og at du står på `main`.
 2. Laster signeringsnøkkel fra `.env.release`.
-3. Bumper versjon i de tre filene.
+3. Bumper versjon i de tre filene og folder `--notes` inn i `CHANGELOG.md`
+   (erstatter «## Ikke utgitt»-seksjonen). Endringsloggen vises i appen under
+   **Innstillinger → Oppdateringer**.
 4. Kjører `npm run check` + `npm test` (hopp over med `--skip-checks`).
 5. `npx tauri build` → signerer og bygger:
    - `src-tauri/target/release/bundle/nsis/NotaB!_0.2.0_x64-setup.exe` (+ `.sig`)

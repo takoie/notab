@@ -138,6 +138,37 @@ async function main() {
   // (Cargo.lock picks up the new package version during `tauri build` below,
   // so it lands in the same commit.)
 
+  // 2b. fold the release notes into CHANGELOG.md (best-effort, line-based)
+  const changelogPath = join(ROOT, 'CHANGELOG.md');
+  if (existsSync(changelogPath)) {
+    const today = new Date().toISOString().slice(0, 10);
+    const entry = notes
+      .split('\n')
+      .map((l) => (l.trim() ? (l.trimStart().startsWith('-') ? l.trimStart() : `- ${l.trim()}`) : ''))
+      .filter((l, i, a) => l || (i > 0 && a[i - 1])) // collapse blank runs
+      .join('\n');
+    const lines = readFileSync(changelogPath, 'utf8').split('\n');
+    const out = [];
+    let inserted = false;
+    let dropUntilNextH2 = false;
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
+        if (!inserted) {
+          out.push(`## ${version} — ${today}`, '', entry, '');
+          inserted = true;
+        }
+        dropUntilNextH2 = line.trim() === '## Ikke utgitt';
+        if (dropUntilNextH2) continue;
+      } else if (dropUntilNextH2) {
+        continue;
+      }
+      out.push(line);
+    }
+    if (!inserted) out.push('', `## ${version} — ${today}`, '', entry);
+    if (dryRun) console.log(`would prepend v${version} to CHANGELOG.md`);
+    else writeFileSync(changelogPath, out.join('\n'));
+  }
+
   // 3. checks
   if (!skipChecks) {
     run('npm', ['run', 'check']);

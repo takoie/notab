@@ -70,6 +70,20 @@ export async function closePinnedWindow(kind: 'note' | 'tab' | 'board', id: stri
   await invoke('close_pinned_window', { kind, id });
 }
 
+/** Open a URL in the user's default browser (or a new tab on the web). */
+export async function openExternal(url: string) {
+  if (!inTauri) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  try {
+    const { openUrl } = await import('@tauri-apps/plugin-opener');
+    await openUrl(url);
+  } catch {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
 export async function focusMainWindow() {
   if (!inTauri) return;
   const { invoke } = await import('@tauri-apps/api/core');
