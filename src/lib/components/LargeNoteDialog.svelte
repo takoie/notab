@@ -77,6 +77,8 @@
         });
       }
       open = false;
+    } catch (e) {
+      toasts.error(e instanceof Error ? e.message : 'Kunne ikke lagre notatet');
     } finally {
       busy = false;
     }

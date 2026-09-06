@@ -10,6 +10,11 @@ function now() {
   return Date.now();
 }
 
+/** Plain, proxy-free copy safe for IndexedDB structured-clone. */
+function plainNote(n: Note): Note {
+  return { ...n, images: [...(n.images ?? [])] };
+}
+
 function freshTab(name: string, orderKey: string): Tab {
   const t = now();
   return {
@@ -183,21 +188,22 @@ class NotabStore {
   }
 
   async #commitNote(note: Note, opType: 'upsertNote' | 'deleteNote' = 'upsertNote') {
-    note.updatedAt = now();
-    this.notes = upsert(this.notes, note);
-    this.#byId.set(note.id, note);
-    await local.putNote(note);
+    // detach from any Svelte state proxy — IndexedDB cannot structured-clone a proxy
+    const row = plainNote({ ...note, updatedAt: now() });
+    this.notes = upsert(this.notes, row);
+    this.#byId.set(row.id, row);
+    await local.putNote(row);
     await this.#enqueue({
       type: opType,
-      tabId: note.tabId,
-      entityId: note.id,
-      payload: noteToWire(note),
-      clientUpdatedAt: note.updatedAt,
+      tabId: row.tabId,
+      entityId: row.id,
+      payload: noteToWire(row),
+      clientUpdatedAt: row.updatedAt,
       tries: 0,
       nextAttemptAt: 0,
     });
     emit({ kind: 'local-change' });
-    emitCrossOnly({ kind: 'remote-change', tabId: note.tabId });
+    emitCrossOnly({ kind: 'remote-change', tabId: row.tabId });
   }
 
   async #enqueue(op: OutboxOp) {
@@ -241,7 +247,7 @@ class NotabStore {
     // tombstone the notes locally too (no per-note ops needed; server cascades)
     const kids = this.notes.filter((n) => n.tabId === id && !n.deleted);
     for (const n of kids) {
-      const dead = { ...n, deleted: true, updatedAt: now() };
+      const dead = plainNote({ ...n, deleted: true, updatedAt: now() });
       this.notes = upsert(this.notes, dead);
       this.#byId.set(dead.id, dead);
       await local.putNote(dead);
@@ -345,7 +351,7 @@ class NotabStore {
     const note = this.#byId.get(id);
     if (!note) return;
     // pin state is local-only UI; still persist + bump so popups react
-    const next = { ...note, pinned };
+    const next = plainNote({ ...note, pinned });
     this.notes = upsert(this.notes, next);
     this.#byId.set(id, next);
     await local.putNote(next);
