@@ -33,8 +33,8 @@
 <header
   class="drag-region flex h-11 shrink-0 items-center gap-2 border-b border-border bg-surface px-2 pl-3 select-none"
 >
-  <Logo class="h-[22px] w-[22px]" />
-  <span class="text-[13px] font-semibold tracking-tight text-ink">NotaB!</span>
+  <Logo class="h-[24px] w-[24px]" />
+  <span class="text-[17px] font-bold tracking-[-0.02em] text-ink">NotaB<span class="text-accent">!</span></span>
 
   <div class="flex-1"></div>
 

@@ -1,7 +1,9 @@
 <script lang="ts">
-  // NotaB! mark — the "!" reimagined as a downward fountain-pen nib (with slit
-  // and breather hole) above the exclamation dot. Rounded accent tile.
+  // NotaB! mark — the "!" as an upward fountain-pen nib (slit + dot nestled in
+  // the rounded base) on the violet tile. Matches logo concept 2.
   let { class: klass = 'h-6 w-6', tile = true }: { class?: string; tile?: boolean } = $props();
+
+  const A = 'rgb(var(--c-accent, 108 99 232))';
 </script>
 
 <svg
@@ -13,7 +15,7 @@
   aria-label="NotaB!"
 >
   {#if tile}
-    <rect x="3" y="3" width="58" height="58" rx="16" fill="rgb(var(--c-accent, 108 99 232))" />
+    <rect x="3" y="3" width="58" height="58" rx="16" fill={A} />
     <rect
       x="3.75"
       y="3.75"
@@ -25,20 +27,12 @@
       stroke-width="1.5"
     />
 
-    <!-- nib -->
-    <path d="M32 48 L43 19 Q32 13.5 21 19 Z" fill="#fff" />
-    <circle cx="32" cy="22.5" r="2.3" fill="rgb(var(--c-accent, 108 99 232))" />
-    <path
-      d="M32 25 V40.5"
-      stroke="rgb(var(--c-accent, 108 99 232))"
-      stroke-width="3.2"
-      stroke-linecap="round"
-    />
-    <!-- exclamation dot -->
-    <circle cx="32" cy="52.5" r="3.6" fill="#fff" />
+    <path d="M32 12 L45 40 Q32 51 19 40 Z" fill="#fff" />
+    <path d="M32 20 V39" stroke={A} stroke-width="3" stroke-linecap="round" />
+    <circle cx="32" cy="45.5" r="4" fill="#fff" />
   {:else}
-    <path d="M32 48 L43 19 Q32 13.5 21 19 Z" fill="currentColor" />
-    <path d="M32 26 V40" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.35" />
-    <circle cx="32" cy="53" r="3.4" fill="currentColor" />
+    <path d="M32 12 L45 40 Q32 51 19 40 Z" fill="currentColor" />
+    <path d="M32 20 V39" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.35" />
+    <circle cx="32" cy="45.5" r="4" fill="currentColor" />
   {/if}
 </svg>
