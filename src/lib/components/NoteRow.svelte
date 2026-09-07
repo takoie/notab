@@ -203,106 +203,112 @@
       </span>
     {/if}
 
-    <div
-      class={cn('flex items-start gap-1.5 py-1.5 pr-1', draggable ? 'pl-4' : 'pl-1')}
-      class:pt-2={note.color}
-    >
-      <button
-        class={cn(
-          'mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
-          note.done
-            ? 'border-accent bg-accent text-accent-ink'
-            : note.importance === 'high'
-              ? 'border-danger/50 hover:border-danger'
-              : 'border-border-strong hover:border-accent',
-        )}
-        aria-label={note.done ? 'Merk som ikke gjort' : 'Merk som gjort'}
-        onclick={() => notab.toggleDone(note.id)}
-      >
-        {#if note.done}
-          <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M2.5 6.5l2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        {/if}
-      </button>
-
-      {#if note.importance !== 'none'}
-        <div class="mt-px shrink-0">
-          <ImportanceMenu
-            value={note.importance}
-            compact
-            onChange={(v) => notab.setImportance(note.id, v)}
-          />
-        </div>
-      {/if}
-
-      <div class="flex min-w-0 flex-1 items-start gap-1">
-        {#if collapsible}
+    <div class={cn('px-2 py-1.5', note.color && 'pt-2')}>
+      <!-- header — title balances on the card centre regardless of left controls -->
+      <div class="flex items-center gap-1.5">
+        <div class={cn('flex w-16 shrink-0 items-center gap-1', draggable && 'pl-2')}>
           <button
-            class="mt-px grid h-3.5 w-3.5 shrink-0 place-items-center rounded text-ink-faint transition-transform hover:text-ink"
-            class:rotate-90={!collapsed}
-            aria-label={collapsed ? 'Utvid notat' : 'Slå sammen notat'}
-            aria-expanded={!collapsed}
-            onclick={() => notab.toggleNoteCollapsed(note.id)}
+            class={cn(
+              'grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
+              note.done
+                ? 'border-accent bg-accent text-accent-ink'
+                : note.importance === 'high'
+                  ? 'border-danger/50 hover:border-danger'
+                  : 'border-border-strong hover:border-accent',
+            )}
+            aria-label={note.done ? 'Merk som ikke gjort' : 'Merk som gjort'}
+            onclick={() => notab.toggleDone(note.id)}
           >
-            <ChevronRight size={12} />
+            {#if note.done}
+              <svg
+                viewBox="0 0 12 12"
+                class="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M2.5 6.5l2.5 2.5 4.5-5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            {/if}
           </button>
-        {/if}
+
+          {#if collapsible}
+            <button
+              class="grid h-3.5 w-3.5 shrink-0 place-items-center rounded text-ink-faint transition-transform hover:text-ink"
+              class:rotate-90={!collapsed}
+              aria-label={collapsed ? 'Utvid notat' : 'Slå sammen notat'}
+              aria-expanded={!collapsed}
+              onclick={() => notab.toggleNoteCollapsed(note.id)}
+            >
+              <ChevronRight size={12} />
+            </button>
+          {/if}
+
+          {#if note.importance !== 'none'}
+            <ImportanceMenu
+              value={note.importance}
+              compact
+              onChange={(v) => notab.setImportance(note.id, v)}
+            />
+          {/if}
+        </div>
 
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="min-w-0 flex-1 cursor-text pr-1" ondblclick={startEdit}>
-          {#if titleText}
-            <p
-              class={cn(
-                'text-center text-[13px] font-semibold text-ink',
-                note.done && 'text-ink-faint line-through',
-              )}
-            >
-              {titleText}{#if collapsed && (hasBody || imgs.length)}<span
-                  class="ml-1 font-normal text-ink-faint">…</span
-                >{/if}
-            </p>
+        <p
+          class={cn(
+            'min-w-0 flex-1 cursor-text truncate text-center text-[13px] font-semibold text-ink',
+            note.done && 'text-ink-faint line-through',
+          )}
+          ondblclick={startEdit}
+        >
+          {titleText || 'Uten tittel'}{#if collapsed && (hasBody || imgs.length)}<span
+              class="ml-1 font-normal text-ink-faint">…</span
+            >{/if}
+        </p>
+
+        <div class="w-16 shrink-0"></div>
+      </div>
+
+      {#if !collapsed && (hasBody || authorName || note.dueDate != null || imgs.length)}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div class="mt-1 cursor-text" ondblclick={startEdit}>
+          {#if hasBody}
+            <div class={cn(note.done && 'text-ink-faint line-through')}>
+              <RichContent
+                html={note.body}
+                interactive={!note.done}
+                onchange={onChecklistToggle}
+              />
+            </div>
           {/if}
 
-          {#if !collapsed}
-            {#if hasBody}
-              <div class={cn('mt-0.5', note.done && 'text-ink-faint line-through')}>
-                <RichContent
-                  html={note.body}
-                  interactive={!note.done}
-                  onchange={onChecklistToggle}
-                />
-              </div>
-            {/if}
+          {#if authorName}
+            <span class="mt-1 flex w-fit items-center gap-1 text-[11px] text-ink-faint">
+              <User size={11} />{authorName}
+            </span>
+          {/if}
 
-            {#if authorName}
-              <span class="mt-1 flex w-fit items-center gap-1 text-[11px] text-ink-faint">
-                <User size={11} />{authorName}
-              </span>
-            {/if}
+          {#if note.dueDate != null}
+            <span
+              class={cn(
+                'mt-1 flex w-fit items-center gap-1 rounded px-1 text-[11px] tabular-nums',
+                overdue
+                  ? 'bg-[rgb(var(--c-danger)/0.12)] font-medium text-danger'
+                  : 'text-ink-faint',
+              )}
+              title={dueTooltip(note.dueDate)}
+            >
+              <Calendar size={11} />{dueLabel(note.dueDate)}
+            </span>
+          {/if}
 
-            {#if note.dueDate != null}
-              <span
-                class={cn(
-                  'mt-1 flex w-fit items-center gap-1 rounded px-1 text-[11px] tabular-nums',
-                  overdue
-                    ? 'bg-[rgb(var(--c-danger)/0.12)] font-medium text-danger'
-                    : 'text-ink-faint',
-                )}
-                title={dueTooltip(note.dueDate)}
-              >
-                <Calendar size={11} />{dueLabel(note.dueDate)}
-              </span>
-            {/if}
-
-            {#if imgs.length}
-              <div class="mt-1.5">
-                <ImageStrip images={imgs} size={44} />
-              </div>
-            {/if}
+          {#if imgs.length}
+            <div class="mt-1.5">
+              <ImageStrip images={imgs} size={44} />
+            </div>
           {/if}
         </div>
-      </div>
+      {/if}
     </div>
 
     <div
