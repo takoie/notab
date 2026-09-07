@@ -151,7 +151,10 @@ export const pushOps = mutation({
         });
         applied.push({ id: op.id, updatedAt: now, skipped: false });
       } else {
-        await requireTabAccess(ctx, userId, op.tabId);
+        // event op — personal (no tab) events sync via the owner
+        const personal = !op.tabId;
+        if (!personal) await requireTabAccess(ctx, userId, op.tabId);
+
         const existing = await ctx.db
           .query('events')
           .withIndex('by_cid', (q) => q.eq('cid', op.id))
@@ -162,6 +165,7 @@ export const pushOps = mutation({
           await ctx.db.insert('events', {
             cid: op.id,
             tabCid: op.tabId,
+            ownerId: personal ? userId : null,
             title: op.title,
             startDate: op.startDate,
             endDate: op.endDate,
@@ -175,6 +179,11 @@ export const pushOps = mutation({
           continue;
         }
 
+        // a personal event can only be changed by its owner
+        if (personal && existing.ownerId && existing.ownerId !== userId) {
+          applied.push({ id: op.id, updatedAt: existing.updatedAt, skipped: true });
+          continue;
+        }
         if (existing.updatedAt > op.clientUpdatedAt) {
           applied.push({ id: op.id, updatedAt: existing.updatedAt, skipped: true });
           continue;
@@ -267,6 +276,34 @@ export const pullTab = query({
       events: events.map((e) => ({
         id: e.cid,
         tabId: e.tabCid,
+        title: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        color: e.color,
+        createdBy: e.createdBy ?? null,
+        deleted: e.deleted,
+        updatedAt: e.updatedAt,
+      })),
+      serverNow: Date.now(),
+    };
+  },
+});
+
+/** Delta pull for the caller's personal (fane-less) calendar events. */
+export const pullPersonalEvents = query({
+  args: { token: v.string(), since: v.number() },
+  handler: async (ctx, args) => {
+    const userId = await requireSession(ctx, args.token);
+    const events = await ctx.db
+      .query('events')
+      .withIndex('by_owner_updated', (q) =>
+        q.eq('ownerId', userId).gt('updatedAt', args.since),
+      )
+      .collect();
+    return {
+      events: events.map((e) => ({
+        id: e.cid,
+        tabId: '',
         title: e.title,
         startDate: e.startDate,
         endDate: e.endDate,

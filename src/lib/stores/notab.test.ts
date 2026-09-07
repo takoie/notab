@@ -205,20 +205,20 @@ describe('NotabStore — local core', () => {
     expect(miss).toHaveLength(0);
   });
 
-  it('local-only events queue no outbox op; tab-linked ones do', async () => {
+  it('fane-less events queue a personal (tabId "") op; tab-linked ones carry the tab id', async () => {
     const tab = await notab.createTab('Delt');
     await notab.addEvent({ title: 'Lokal', startDate: Date.now(), endDate: Date.now(), tabId: null });
-    const before = (await allOps()).filter((o) => o.type.includes('Event')).length;
-    expect(before).toBe(0);
+    const personal = (await allOps()).filter((o) => o.type === 'upsertEvent');
+    expect(personal).toHaveLength(1);
+    expect(personal[0].tabId).toBe('');
     await notab.addEvent({
       title: 'Synket',
       startDate: Date.now(),
       endDate: Date.now(),
       tabId: tab.id,
     });
-    const after = (await allOps()).filter((o) => o.type === 'upsertEvent');
-    expect(after).toHaveLength(1);
-    expect(after[0].tabId).toBe(tab.id);
+    const linked = (await allOps()).filter((o) => o.type === 'upsertEvent' && o.tabId === tab.id);
+    expect(linked).toHaveLength(1);
   });
 
   it('soft-deletes an event', async () => {

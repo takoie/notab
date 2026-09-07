@@ -198,18 +198,18 @@ class NotabStore {
     const row: CalendarEvent = { ...ev, updatedAt: now() };
     this.events = upsert(this.events, row);
     await local.putEvent(row);
-    if (row.tabId) {
-      await this.#enqueue({
-        type: opType,
-        tabId: row.tabId,
-        entityId: row.id,
-        payload: eventToWire(row),
-        clientUpdatedAt: row.updatedAt,
-        tries: 0,
-        nextAttemptAt: 0,
-      });
-      emitCrossOnly({ kind: 'remote-change', tabId: row.tabId });
-    }
+    // every event syncs: fane-linked via the tab channel, fane-less via the
+    // per-user personal channel (tabId '')
+    await this.#enqueue({
+      type: opType,
+      tabId: row.tabId ?? '',
+      entityId: row.id,
+      payload: eventToWire(row),
+      clientUpdatedAt: row.updatedAt,
+      tries: 0,
+      nextAttemptAt: 0,
+    });
+    if (row.tabId) emitCrossOnly({ kind: 'remote-change', tabId: row.tabId });
     emit({ kind: 'local-change' });
   }
 

@@ -243,6 +243,33 @@ class SyncEngine {
       await local.setMeta(sinceKey, res.serverNow);
     }
 
+    // personal (fane-less) calendar events — one per-user channel
+    try {
+      const pkey = 'pull.__personal_events__';
+      const psince = (await local.getMeta<number>(pkey)) ?? 0;
+      const pres = (await queryOnce(api.sync.pullPersonalEvents, {
+        token: this.token,
+        since: psince,
+      })) as { events: (Versioned & Record<string, unknown>)[]; serverNow: number };
+      if (pres.events?.length) {
+        const localPersonal = (await local.getAllEvents()).filter((e) => e.tabId == null);
+        const merged = mergeBatch<Versioned>(
+          localPersonal as unknown as Versioned[],
+          pres.events as Versioned[],
+        );
+        if (merged.toWrite.length) {
+          const rows = merged.toWrite.map((r) =>
+            remoteToEvent(r as Versioned & Record<string, unknown>, null, localPersonal),
+          );
+          await local.putEvents(rows);
+          changed = true;
+        }
+      }
+      await local.setMeta(pkey, pres.serverNow);
+    } catch {
+      /* server not deployed yet / offline — retry next cycle */
+    }
+
     if (changed) emit({ kind: 'remote-change' });
   }
 }
@@ -271,7 +298,7 @@ function remoteToTab(
 
 function remoteToEvent(
   r: Versioned & Record<string, unknown>,
-  tabId: string,
+  tabId: string | null,
   siblings: CalendarEvent[],
 ): CalendarEvent {
   const prev = siblings.find((e) => e.id === r.id);

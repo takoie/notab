@@ -87,7 +87,9 @@ export default defineSchema({
 
   events: defineTable({
     cid: v.string(),
+    // '' when the event is personal (not tied to a fane); syncs via the owner
     tabCid: v.string(),
+    ownerId: v.optional(v.union(v.id('users'), v.null())),
     title: v.string(),
     startDate: v.number(),
     endDate: v.number(),
@@ -99,5 +101,6 @@ export default defineSchema({
   })
     .index('by_cid', ['cid'])
     .index('by_tab', ['tabCid'])
-    .index('by_tab_updated', ['tabCid', 'updatedAt']),
+    .index('by_tab_updated', ['tabCid', 'updatedAt'])
+    .index('by_owner_updated', ['ownerId', 'updatedAt']),
 });
