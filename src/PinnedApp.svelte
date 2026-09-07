@@ -9,6 +9,7 @@
   import { windowControls, startResize, type ResizeDir } from '$lib/tauri';
   import LockScreen from '$lib/components/LockScreen.svelte';
   import NoteRow from '$lib/components/NoteRow.svelte';
+  import Tooltip from '$lib/components/ui/Tooltip.svelte';
   import ImageLightbox from '$lib/components/ImageLightbox.svelte';
 
   const params = new URLSearchParams(location.search);
@@ -167,4 +168,5 @@
   {/if}
 
   <ImageLightbox />
+  <Tooltip />
 </div>

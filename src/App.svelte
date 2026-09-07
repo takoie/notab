@@ -10,6 +10,7 @@
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import ShareDialog from '$lib/components/ShareDialog.svelte';
   import Toasts from '$lib/components/Toasts.svelte';
+  import Tooltip from '$lib/components/ui/Tooltip.svelte';
   import ImageLightbox from '$lib/components/ImageLightbox.svelte';
   import SyncStatus from '$lib/components/SyncStatus.svelte';
   import CalendarView from '$lib/components/calendar/CalendarView.svelte';
@@ -133,4 +134,5 @@
   <ShareDialog bind:open={shareOpen} tab={notab.activeTab} />
   <ImageLightbox />
   <Toasts />
+  <Tooltip />
 </div>
