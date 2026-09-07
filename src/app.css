@@ -90,7 +90,7 @@ body {
 }
 .rich-body :where(ul, ol) {
   margin: 0.15rem 0;
-  padding-left: 1.1rem;
+  padding-left: 0.95rem;
 }
 .rich-body ul {
   list-style: disc;
@@ -103,7 +103,7 @@ body {
 }
 .rich-body ul[data-checklist] {
   list-style: none;
-  padding-left: 1.25rem;
+  padding-left: 1.05rem;
 }
 .rich-body ul[data-checklist] > li {
   position: relative;
@@ -112,7 +112,7 @@ body {
 .rich-body ul[data-checklist] > li::before {
   content: '';
   position: absolute;
-  left: -1.2rem;
+  left: -1rem;
   top: 0.15em;
   width: 0.95em;
   height: 0.95em;
@@ -130,7 +130,7 @@ body {
 .rich-body ul[data-checklist] > li[data-checked]::after {
   content: '';
   position: absolute;
-  left: -0.97rem;
+  left: -0.8rem;
   top: 0.28em;
   width: 0.32em;
   height: 0.55em;
