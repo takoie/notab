@@ -196,14 +196,17 @@
 
     {#if draggable}
       <span
-        class="drag-handle pointer-events-none absolute left-0 top-2 cursor-grab text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
+        class="drag-handle pointer-events-none absolute left-0.5 top-2 cursor-grab text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
         aria-hidden="true"
       >
         <GripVertical size={14} />
       </span>
     {/if}
 
-    <div class="flex items-start gap-1 px-1 py-1.5" class:pt-2={note.color}>
+    <div
+      class={cn('flex items-start gap-1.5 py-1.5 pr-1', draggable ? 'pl-4' : 'pl-1')}
+      class:pt-2={note.color}
+    >
       <button
         class={cn(
           'mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
@@ -233,10 +236,10 @@
         </div>
       {/if}
 
-      <div class="flex min-w-0 flex-1 items-start gap-0.5">
+      <div class="flex min-w-0 flex-1 items-start gap-1">
         {#if collapsible}
           <button
-            class="-ml-0.5 mt-px grid h-3.5 w-3.5 shrink-0 place-items-center rounded text-ink-faint transition-transform hover:text-ink"
+            class="mt-px grid h-3.5 w-3.5 shrink-0 place-items-center rounded text-ink-faint transition-transform hover:text-ink"
             class:rotate-90={!collapsed}
             aria-label={collapsed ? 'Utvid notat' : 'Slå sammen notat'}
             aria-expanded={!collapsed}
