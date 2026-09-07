@@ -71,6 +71,7 @@ export default defineSchema({
     title: v.string(),
     body: v.string(),
     images: v.optional(v.array(v.string())),
+    color: v.optional(v.union(v.string(), v.null())),
     done: v.boolean(),
     importance,
     dueDate: v.union(v.number(), v.null()),

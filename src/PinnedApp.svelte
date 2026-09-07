@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { X, Pin } from '@lucide/svelte';
+  import { X, Pin, Minus, Square } from '@lucide/svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { notab } from '$lib/stores/notab.svelte';
@@ -65,6 +65,12 @@
   async function close() {
     (await windowControls()).close();
   }
+  async function minimize() {
+    (await windowControls()).minimize();
+  }
+  async function toggleMaximize() {
+    (await windowControls()).toggleMaximize();
+  }
 </script>
 
 <div
@@ -79,12 +85,32 @@
           >· {boardCount}</span
         >{/if}
     </span>
-    <button
-      class="no-drag grid h-5 w-5 place-items-center rounded text-ink-faint hover:bg-danger hover:text-white"
-      onclick={close}
-    >
-      <X size={12} />
-    </button>
+    <div class="no-drag flex items-center gap-0.5">
+      <button
+        class="grid h-5 w-5 place-items-center rounded text-ink-faint hover:bg-surface-sunken hover:text-ink"
+        title="Minimer"
+        aria-label="Minimer"
+        onclick={minimize}
+      >
+        <Minus size={12} />
+      </button>
+      <button
+        class="grid h-5 w-5 place-items-center rounded text-ink-faint hover:bg-surface-sunken hover:text-ink"
+        title="Maksimer / gjenopprett"
+        aria-label="Maksimer"
+        onclick={toggleMaximize}
+      >
+        <Square size={10} />
+      </button>
+      <button
+        class="grid h-5 w-5 place-items-center rounded text-ink-faint hover:bg-danger hover:text-white"
+        title="Lukk"
+        aria-label="Lukk"
+        onclick={close}
+      >
+        <X size={12} />
+      </button>
+    </div>
   </header>
 
   <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5">

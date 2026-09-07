@@ -49,6 +49,7 @@ function freshNote(
     title: title.trim(),
     body: '',
     images: [],
+    color: null,
     done: false,
     importance: 'none',
     dueDate: null,
@@ -396,6 +397,7 @@ class NotabStore {
       images?: string[];
       kind?: Note['kind'];
       body?: string;
+      color?: string | null;
     } = {},
   ): Promise<Note | null> {
     const body = opts.body ?? '';
@@ -411,6 +413,7 @@ class NotabStore {
     );
     if (opts.dueDate !== undefined) note.dueDate = opts.dueDate;
     if (opts.importance) note.importance = opts.importance;
+    if (opts.color !== undefined) note.color = opts.color;
     note.body = body;
     note.images = images;
     await this.#commitNote(note);
@@ -440,7 +443,10 @@ class NotabStore {
   async updateNote(
     id: string,
     patch: Partial<
-      Pick<Note, 'title' | 'body' | 'importance' | 'dueDate' | 'done' | 'images' | 'kind'>
+      Pick<
+        Note,
+        'title' | 'body' | 'importance' | 'dueDate' | 'done' | 'images' | 'kind' | 'color'
+      >
     >,
   ) {
     const note = this.#byId.get(id);

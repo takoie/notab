@@ -17,6 +17,7 @@ function note(p: Partial<Note>): Note {
     title: p.title ?? '',
     body: '',
     images: [],
+    color: p.color ?? null,
     done: p.done ?? false,
     importance: p.importance ?? 'med',
     dueDate: p.dueDate ?? null,

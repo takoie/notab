@@ -27,6 +27,7 @@
     "convex": "^1.23.0",
     "fractional-indexing": "^3.2.0",
     "idb": "^8.0.2",
+    "katex": "^0.16.47",
     "svelte-dnd-action": "^0.9.61",
     "tailwind-merge": "^3.0.2"
   },
@@ -35,6 +36,7 @@
     "@tauri-apps/cli": "^2.5.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/svelte": "^5.2.7",
+    "@types/katex": "^0.16.8",
     "@types/node": "^22.20.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",

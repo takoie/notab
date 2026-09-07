@@ -74,6 +74,7 @@ export interface WireNote {
   title: string;
   body: string;
   images: string[];
+  color: string | null;
   done: boolean;
   importance: Note['importance'];
   dueDate: number | null;
@@ -106,6 +107,7 @@ export function noteToWire(n: Note): Omit<WireNote, 'kind'> {
     title: n.title,
     body: n.body,
     images: n.images ?? [],
+    color: n.color ?? null,
     done: n.done,
     importance: n.importance,
     dueDate: n.dueDate,

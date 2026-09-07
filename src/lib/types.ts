@@ -38,6 +38,8 @@ export interface Note {
   body: string;
   /** pasted images as downscaled data: URIs */
   images: string[];
+  /** optional accent/background colour for the note card (hex), or null */
+  color: string | null;
   done: boolean;
   importance: Importance;
   /** epoch ms of the due date (start of day), or null */

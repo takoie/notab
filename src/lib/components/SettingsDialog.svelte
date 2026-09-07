@@ -118,7 +118,10 @@
           <h3 class="text-[12px] font-semibold uppercase tracking-wide text-ink-faint">
             Korrekturspråk
           </h3>
-          <p class="text-[12px] text-ink-soft">Språk for stavekontroll i notatfelt.</p>
+          <p class="text-[12px] text-ink-soft">
+            Språk for stavekontroll i notatfelt. Velg «Av» for å slå den helt av.
+            (Å legge til egne ord i ordlista styres av operativsystemet.)
+          </p>
           <Select
             value={settings.proofLang}
             options={PROOF_LANGS}

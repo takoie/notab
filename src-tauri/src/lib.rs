@@ -40,7 +40,8 @@ async fn open_pinned_window(
     .min_inner_size(240.0, 200.0)
     .always_on_top(true)
     .decorations(false)
-    .skip_taskbar(true)
+    // keep a taskbar button so a minimised pin can be restored the normal way
+    .skip_taskbar(false)
     .resizable(true)
     .shadow(true);
 
