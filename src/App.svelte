@@ -27,6 +27,8 @@
   import { checkForUpdate } from '$lib/updater';
   import { LogIn, ChevronsDownUp, ChevronsUpDown } from '@lucide/svelte';
 
+  const appVersion = __APP_VERSION__;
+
   let ready = $state(false);
   let showAuth = $state(false);
   let settingsOpen = $state(false);
@@ -110,8 +112,13 @@
     {/if}
 
     <footer
-      class="flex h-8 shrink-0 items-center justify-between border-t border-border bg-surface px-3"
+      class="relative flex h-8 shrink-0 items-center justify-between border-t border-border bg-surface px-3"
     >
+      <span
+        class="pointer-events-none absolute left-1/2 -translate-x-1/2 select-none text-[10px] tabular-nums text-ink-faint/40"
+      >
+        v{appVersion}
+      </span>
       <SyncStatus />
       {#if !session.signedIn}
         <button
