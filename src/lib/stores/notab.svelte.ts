@@ -1,6 +1,6 @@
 import type { CalendarEvent, Importance, Note, OutboxOp, SortMode, Tab } from '../types';
 import { newId } from '../ids';
-import { orderKeyAfter, orderKeyBetween, sortNotes } from '../order';
+import { orderKeyAfter, orderKeyBefore, orderKeyBetween, sortNotes } from '../order';
 import { firstLine } from '../richtext';
 import { startOfDay } from '../date';
 import * as local from '../db/local';
@@ -481,6 +481,11 @@ class NotabStore {
     return orderKeyAfter(lastKey);
   }
 
+  #firstOrderKey(tabId: string): string {
+    const firstKey = this.#rowsInOrder(tabId)[0]?.orderKey ?? null;
+    return orderKeyBefore(firstKey);
+  }
+
   async addNote(
     tabId: string,
     title: string,
@@ -491,6 +496,8 @@ class NotabStore {
       kind?: Note['kind'];
       body?: string;
       color?: string | null;
+      /** where the note lands in manual order (default: top) */
+      position?: 'top' | 'bottom';
     } = {},
   ): Promise<Note | null> {
     const body = opts.body ?? '';
@@ -498,12 +505,9 @@ class NotabStore {
     const trimmed = title.trim() || firstLine(body);
     // a note needs text (title or body) or at least an image
     if (!trimmed && images.length === 0) return null;
-    const note = freshNote(
-      tabId,
-      trimmed || 'Bilde',
-      this.#nextOrderKey(tabId),
-      opts.kind ?? 'large',
-    );
+    const orderKey =
+      opts.position === 'bottom' ? this.#nextOrderKey(tabId) : this.#firstOrderKey(tabId);
+    const note = freshNote(tabId, trimmed || 'Bilde', orderKey, opts.kind ?? 'large');
     if (opts.dueDate !== undefined) note.dueDate = opts.dueDate;
     if (opts.importance) note.importance = opts.importance;
     if (opts.color !== undefined) note.color = opts.color;

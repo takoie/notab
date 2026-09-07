@@ -15,16 +15,24 @@ describe('NotabStore — local core', () => {
     expect(notab.activeTabId).toBe(tab.id);
   });
 
-  it('adds notes and orders them by insertion in manual mode', async () => {
+  it('new notes land on top in manual mode (newest first)', async () => {
     const tab = await notab.createTab('Fag');
     await notab.addNote(tab.id, 'Første');
     await notab.addNote(tab.id, 'Andre');
     await notab.addNote(tab.id, 'Tredje');
     expect(notab.notesForTab(tab.id).map((n) => n.title)).toEqual([
-      'Første',
-      'Andre',
       'Tredje',
+      'Andre',
+      'Første',
     ]);
+  });
+
+  it('position:bottom appends a note to the end', async () => {
+    const tab = await notab.createTab('Fag');
+    await notab.addNote(tab.id, 'A', { position: 'bottom' });
+    await notab.addNote(tab.id, 'B', { position: 'bottom' });
+    await notab.addNote(tab.id, 'C', { position: 'bottom' });
+    expect(notab.notesForTab(tab.id).map((n) => n.title)).toEqual(['A', 'B', 'C']);
   });
 
   it('ignores blank notes', async () => {
@@ -138,10 +146,10 @@ describe('NotabStore — local core', () => {
 
   it('groups notes into sections by dividers, sorting within each', async () => {
     const tab = await notab.createTab('X');
-    const a = await notab.addNote(tab.id, 'A');
+    const a = await notab.addNote(tab.id, 'A', { position: 'bottom' });
     const d = await notab.addDivider(tab.id, 'Senere');
-    const b = await notab.addNote(tab.id, 'B');
-    const c = await notab.addNote(tab.id, 'C');
+    const b = await notab.addNote(tab.id, 'B', { position: 'bottom' });
+    const c = await notab.addNote(tab.id, 'C', { position: 'bottom' });
     // manual order: A | --Senere-- | B, C
     const secs = notab.sectionsForTab(tab.id);
     expect(secs.map((s) => s.divider?.title ?? null)).toEqual([null, 'Senere']);
@@ -155,9 +163,9 @@ describe('NotabStore — local core', () => {
 
   it('deleting a divider merges its notes into the previous section', async () => {
     const tab = await notab.createTab('X');
-    await notab.addNote(tab.id, 'A');
+    await notab.addNote(tab.id, 'A', { position: 'bottom' });
     const d = await notab.addDivider(tab.id, 'S');
-    await notab.addNote(tab.id, 'B');
+    await notab.addNote(tab.id, 'B', { position: 'bottom' });
     await notab.deleteNote(d.id);
     const secs = notab.sectionsForTab(tab.id);
     expect(secs).toHaveLength(1);
@@ -167,9 +175,9 @@ describe('NotabStore — local core', () => {
   it('collapsed section drags as a unit (its notes ride with the divider)', async () => {
     const tab = await notab.createTab('X');
     const d1 = await notab.addDivider(tab.id, 'One');
-    await notab.addNote(tab.id, 'A');
+    await notab.addNote(tab.id, 'A', { position: 'bottom' });
     const d2 = await notab.addDivider(tab.id, 'Two');
-    const b = await notab.addNote(tab.id, 'B');
+    const b = await notab.addNote(tab.id, 'B', { position: 'bottom' });
     notab.toggleSection(d1.id); // collapse "One" (hides A)
     // drop zone only shows: d1, d2, B  — user moves d1 to the end
     await notab.reorderTabItems(tab.id, [d2.id, b!.id, d1.id]);
