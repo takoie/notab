@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## 0.4.2 — 2026-09-07
+
+- Kalenderhendelser uten fane synkroniseres nå til profilen din (Convex) i stedet for å bli liggende bare lokalt. Velg «Ingen fane» i hendelsesdialogen for privat synk, eller en fane for å dele med andre. Krever «npx convex deploy» av backend for å tre i kraft.
+
 ## 0.4.1 — 2026-09-07
 
 - Kalenderhendelser kobles nå til gjeldende fane som standard, så de synkroniseres og sikkerhetskopieres; «ikke koble til fane» er nå et eget avkrysningsvalg og ikke en oppføring i fane-lista. Synk er gjort mer robust: én avvist operasjon blokkerer ikke lenger resten av synk-køen.
