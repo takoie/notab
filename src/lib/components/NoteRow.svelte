@@ -1,5 +1,14 @@
 <script lang="ts">
-  import { GripVertical, Pin, PinOff, Trash2, Calendar, ExternalLink, User } from '@lucide/svelte';
+  import {
+    GripVertical,
+    Pin,
+    PinOff,
+    Trash2,
+    Calendar,
+    ExternalLink,
+    User,
+    ChevronRight,
+  } from '@lucide/svelte';
   import type { Note, Importance } from '$lib/types';
   import { notab } from '$lib/stores/notab.svelte';
   import { session } from '$lib/stores/session.svelte';
@@ -44,6 +53,10 @@
   const imgs = $derived(note.images ?? []);
   const hasBody = $derived(!isEmptyHtml(note.body ?? ''));
   const titleText = $derived(note.title || firstLine(note.body ?? ''));
+  const collapsed = $derived(notab.isNoteCollapsed(note.id));
+  const collapsible = $derived(
+    hasBody || imgs.length > 0 || note.dueDate != null || authorName != null,
+  );
 
   function fill(from: { title: string; html: string; due: number | null; importance: Importance; images: string[]; color: string | null }) {
     titleDraft = from.title;
@@ -181,18 +194,18 @@
       ></span>
     {/if}
 
-    <div class="flex items-start gap-2 px-2 py-2" class:pt-2.5={note.color}>
+    <div class="flex items-start gap-1.5 px-1.5 py-1.5" class:pt-2={note.color}>
       {#if draggable}
         <span
           class="drag-handle -ml-1 mt-0.5 cursor-grab text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
         >
-          <GripVertical size={16} />
+          <GripVertical size={15} />
         </span>
       {/if}
 
       <button
         class={cn(
-          'mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
+          'mt-px grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[6px] border transition-colors',
           note.done
             ? 'border-accent bg-accent text-accent-ink'
             : note.importance === 'high'
@@ -209,70 +222,95 @@
         {/if}
       </button>
 
-      <div
-        class={cn(
-          'mt-0.5 shrink-0',
-          note.importance === 'none' &&
-            'opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100',
-        )}
-      >
-        <ImportanceMenu
-          value={note.importance}
-          compact
-          onChange={(v) => notab.setImportance(note.id, v)}
-        />
-      </div>
+      {#if note.importance !== 'none'}
+        <div class="mt-px shrink-0">
+          <ImportanceMenu
+            value={note.importance}
+            compact
+            onChange={(v) => notab.setImportance(note.id, v)}
+          />
+        </div>
+      {/if}
 
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div class="min-w-0 flex-1 cursor-text pr-1" ondblclick={startEdit}>
-        {#if titleText}
-          <p
-            class={cn(
-              'text-[13px] font-semibold text-ink',
-              note.done && 'text-ink-faint line-through',
-            )}
+      <div class="flex min-w-0 flex-1 items-start gap-0.5">
+        {#if collapsible}
+          <button
+            class="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded text-ink-faint transition-transform hover:text-ink"
+            class:rotate-90={!collapsed}
+            aria-label={collapsed ? 'Utvid notat' : 'Slå sammen notat'}
+            aria-expanded={!collapsed}
+            onclick={() => notab.toggleNoteCollapsed(note.id)}
           >
-            {titleText}
-          </p>
+            <ChevronRight size={13} />
+          </button>
         {/if}
 
-        {#if hasBody}
-          <div class={cn('mt-0.5', note.done && 'text-ink-faint line-through')}>
-            <RichContent html={note.body} interactive={!note.done} onchange={onChecklistToggle} />
-          </div>
-        {/if}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div class="min-w-0 flex-1 cursor-text pr-1" ondblclick={startEdit}>
+          {#if titleText}
+            <p
+              class={cn(
+                'text-[13px] font-semibold text-ink',
+                note.done && 'text-ink-faint line-through',
+              )}
+            >
+              {titleText}{#if collapsed && (hasBody || imgs.length)}<span
+                  class="ml-1 font-normal text-ink-faint">…</span
+                >{/if}
+            </p>
+          {/if}
 
-        {#if authorName}
-          <span class="mt-1 flex w-fit items-center gap-1 text-[11px] text-ink-faint">
-            <User size={11} />{authorName}
-          </span>
-        {/if}
+          {#if !collapsed}
+            {#if hasBody}
+              <div class={cn('mt-0.5', note.done && 'text-ink-faint line-through')}>
+                <RichContent
+                  html={note.body}
+                  interactive={!note.done}
+                  onchange={onChecklistToggle}
+                />
+              </div>
+            {/if}
 
-        {#if note.dueDate != null}
-          <span
-            class={cn(
-              'mt-1 flex w-fit items-center gap-1 rounded px-1 text-[11px] tabular-nums',
-              overdue
-                ? 'bg-[rgb(var(--c-danger)/0.12)] font-medium text-danger'
-                : 'text-ink-faint',
-            )}
-            title={dueTooltip(note.dueDate)}
-          >
-            <Calendar size={11} />{dueLabel(note.dueDate)}
-          </span>
-        {/if}
+            {#if authorName}
+              <span class="mt-1 flex w-fit items-center gap-1 text-[11px] text-ink-faint">
+                <User size={11} />{authorName}
+              </span>
+            {/if}
 
-        {#if imgs.length}
-          <div class="mt-1.5">
-            <ImageStrip images={imgs} size={44} />
-          </div>
-        {/if}
+            {#if note.dueDate != null}
+              <span
+                class={cn(
+                  'mt-1 flex w-fit items-center gap-1 rounded px-1 text-[11px] tabular-nums',
+                  overdue
+                    ? 'bg-[rgb(var(--c-danger)/0.12)] font-medium text-danger'
+                    : 'text-ink-faint',
+                )}
+                title={dueTooltip(note.dueDate)}
+              >
+                <Calendar size={11} />{dueLabel(note.dueDate)}
+              </span>
+            {/if}
+
+            {#if imgs.length}
+              <div class="mt-1.5">
+                <ImageStrip images={imgs} size={44} />
+              </div>
+            {/if}
+          {/if}
+        </div>
       </div>
     </div>
 
     <div
       class="absolute right-1 top-1 flex items-center gap-0.5 rounded-lg bg-surface/85 text-ink-faint opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 focus-within:opacity-100"
     >
+      {#if note.importance === 'none'}
+        <ImportanceMenu
+          value={note.importance}
+          compact
+          onChange={(v) => notab.setImportance(note.id, v)}
+        />
+      {/if}
       <button
         class="grid h-7 w-7 place-items-center rounded-lg hover:bg-surface-sunken hover:text-ink"
         class:text-accent={note.pinned}

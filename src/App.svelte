@@ -24,7 +24,7 @@
   import { syncEngine } from '$lib/sync/engine.svelte';
   import { getMeta, setMeta } from '$lib/db/local';
   import { checkForUpdate } from '$lib/updater';
-  import { LogIn } from '@lucide/svelte';
+  import { LogIn, ChevronsDownUp, ChevronsUpDown } from '@lucide/svelte';
 
   let ready = $state(false);
   let showAuth = $state(false);
@@ -82,7 +82,21 @@
         {#if notab.activeTab}
           {#key notab.activeTab.id}
             <NoteComposer tabId={notab.activeTab.id} tabName={notab.activeTab.name} />
-            <div class="flex justify-end px-4 pb-1">
+            {@const allCollapsed = notab.allNotesCollapsed(notab.activeTab.id)}
+            <div class="flex items-center justify-end gap-0.5 px-4 pb-1">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] font-medium text-ink-soft hover:bg-surface-sunken hover:text-ink"
+                title={allCollapsed ? 'Utvid alle notater' : 'Slå sammen alle notater'}
+                onclick={() =>
+                  notab.activeTab &&
+                  notab.setAllNotesCollapsed(notab.activeTab.id, !allCollapsed)}
+              >
+                {#if allCollapsed}<ChevronsUpDown size={14} />{:else}<ChevronsDownUp
+                    size={14}
+                  />{/if}
+                <span class="hidden sm:inline">{allCollapsed ? 'Utvid alle' : 'Slå sammen'}</span>
+              </button>
               <SortMenu
                 value={notab.activeTab.sortMode}
                 onChange={(m) => notab.activeTab && notab.setSortMode(notab.activeTab.id, m)}

@@ -233,6 +233,22 @@ describe('NotabStore — local core', () => {
     expect(notab.getEvent(ev!.id)?.deleted).toBe(true);
   });
 
+  it('collapses a single note and toggles all notes in a tab', async () => {
+    const tab = await notab.createTab('X');
+    const a = await notab.addNote(tab.id, 'A');
+    const b = await notab.addNote(tab.id, 'B');
+    expect(notab.isNoteCollapsed(a!.id)).toBe(false);
+    notab.toggleNoteCollapsed(a!.id);
+    expect(notab.isNoteCollapsed(a!.id)).toBe(true);
+    expect(notab.allNotesCollapsed(tab.id)).toBe(false);
+    notab.setAllNotesCollapsed(tab.id, true);
+    expect(notab.allNotesCollapsed(tab.id)).toBe(true);
+    expect(notab.isNoteCollapsed(b!.id)).toBe(true);
+    notab.setAllNotesCollapsed(tab.id, false);
+    expect(notab.isNoteCollapsed(a!.id)).toBe(false);
+    expect(notab.isNoteCollapsed(b!.id)).toBe(false);
+  });
+
   it('pins and unpins a note without a tombstone', async () => {
     const tab = await notab.createTab('X');
     const a = await notab.addNote(tab.id, 'A');

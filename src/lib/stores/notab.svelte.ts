@@ -78,10 +78,13 @@ class NotabStore {
   lastSeen = $state<Record<string, number>>({});
   /** divider-note id -> true when that section is folded (local, persisted) */
   collapsedSections = $state<Record<string, true>>({});
+  /** note id -> true when that note is collapsed to its title (local, persisted) */
+  collapsedNotes = $state<Record<string, true>>({});
 
   #byId = new Map<string, Note>();
   #lastSeenLoaded = false;
   #collapsedLoaded = false;
+  #collapsedNotesLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -103,6 +106,9 @@ class NotabStore {
     const folded = (await local.getMeta<string[]>('collapsedSections')) ?? [];
     this.collapsedSections = Object.fromEntries(folded.map((id) => [id, true as const]));
     this.#collapsedLoaded = true;
+    const foldedNotes = (await local.getMeta<string[]>('collapsedNotes')) ?? [];
+    this.collapsedNotes = Object.fromEntries(foldedNotes.map((id) => [id, true as const]));
+    this.#collapsedNotesLoaded = true;
     if (session.userId && session.username) {
       this.userNames = { ...this.userNames, [session.userId]: session.username };
     }
@@ -318,6 +324,40 @@ class NotabStore {
     else next[dividerId] = true;
     this.collapsedSections = next;
     if (this.#collapsedLoaded) void local.setMeta('collapsedSections', Object.keys(next));
+  }
+
+  /* ---- per-note collapse ---- */
+
+  isNoteCollapsed(id: string): boolean {
+    return this.collapsedNotes[id] === true;
+  }
+
+  #persistCollapsedNotes(next: Record<string, true>) {
+    this.collapsedNotes = next;
+    if (this.#collapsedNotesLoaded) {
+      void local.setMeta('collapsedNotes', Object.keys($state.snapshot(next)));
+    }
+  }
+
+  toggleNoteCollapsed(id: string) {
+    const next = { ...$state.snapshot(this.collapsedNotes) };
+    if (next[id]) delete next[id];
+    else next[id] = true;
+    this.#persistCollapsedNotes(next);
+  }
+
+  allNotesCollapsed(tabId: string): boolean {
+    const ids = this.notesForTab(tabId).map((n) => n.id);
+    return ids.length > 0 && ids.every((id) => this.collapsedNotes[id] === true);
+  }
+
+  setAllNotesCollapsed(tabId: string, collapsed: boolean) {
+    const next = { ...$state.snapshot(this.collapsedNotes) };
+    for (const n of this.notesForTab(tabId)) {
+      if (collapsed) next[n.id] = true;
+      else delete next[n.id];
+    }
+    this.#persistCollapsedNotes(next);
   }
 
   async addDivider(tabId: string, title: string): Promise<Note> {
