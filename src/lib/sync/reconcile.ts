@@ -1,4 +1,4 @@
-import type { Note, Tab } from '../types';
+import type { CalendarEvent, Note, Tab } from '../types';
 
 export interface Versioned {
   id: string;
@@ -83,7 +83,19 @@ export interface WireNote {
   clientUpdatedAt: number;
 }
 
-export type WireOp = WireTab | WireNote;
+export interface WireEvent {
+  kind: 'event';
+  id: string;
+  tabId: string;
+  title: string;
+  startDate: number;
+  endDate: number;
+  color: string | null;
+  deleted: boolean;
+  clientUpdatedAt: number;
+}
+
+export type WireOp = WireTab | WireNote | WireEvent;
 
 /** Strip client-only bookkeeping before sending a row to the server. */
 export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
@@ -96,6 +108,19 @@ export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
     archived: t.archived,
     deleted: t.deleted,
     clientUpdatedAt: t.updatedAt,
+  };
+}
+
+export function eventToWire(e: CalendarEvent): Omit<WireEvent, 'kind'> {
+  return {
+    id: e.id,
+    tabId: e.tabId ?? '',
+    title: e.title,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    color: e.color,
+    deleted: e.deleted,
+    clientUpdatedAt: e.updatedAt,
   };
 }
 

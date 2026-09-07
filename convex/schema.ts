@@ -84,4 +84,20 @@ export default defineSchema({
     .index('by_cid', ['cid'])
     .index('by_tab', ['tabCid'])
     .index('by_tab_updated', ['tabCid', 'updatedAt']),
+
+  events: defineTable({
+    cid: v.string(),
+    tabCid: v.string(),
+    title: v.string(),
+    startDate: v.number(),
+    endDate: v.number(),
+    color: v.union(v.string(), v.null()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.union(v.id('users'), v.null()),
+    deleted: v.boolean(),
+  })
+    .index('by_cid', ['cid'])
+    .index('by_tab', ['tabCid'])
+    .index('by_tab_updated', ['tabCid', 'updatedAt']),
 });

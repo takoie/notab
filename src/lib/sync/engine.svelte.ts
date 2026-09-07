@@ -1,4 +1,4 @@
-import type { SyncState, Tab, Note } from '../types';
+import type { SyncState, Tab, Note, CalendarEvent } from '../types';
 import { api } from '../../../convex/_generated/api';
 import { convexConfigured, mutateOnce, queryOnce } from '../convex.svelte';
 import { session } from '../stores/session.svelte';
@@ -12,6 +12,7 @@ import {
   type WireOp,
   type WireTab,
   type WireNote,
+  type WireEvent,
 } from './reconcile';
 
 const PULL_INTERVAL_MS = 20_000;
@@ -107,11 +108,15 @@ class SyncEngine {
       .slice(0, 100);
     if (ops.length === 0) return;
 
-    const wire: WireOp[] = ops.map((o) =>
-      o.type === 'upsertTab' || o.type === 'deleteTab'
-        ? { kind: 'tab', ...(o.payload as Omit<WireTab, 'kind'>) }
-        : { kind: 'note', ...(o.payload as Omit<WireNote, 'kind'>) },
-    );
+    const wire: WireOp[] = ops.map((o) => {
+      if (o.type === 'upsertTab' || o.type === 'deleteTab') {
+        return { kind: 'tab', ...(o.payload as Omit<WireTab, 'kind'>) };
+      }
+      if (o.type === 'upsertEvent' || o.type === 'deleteEvent') {
+        return { kind: 'event', ...(o.payload as Omit<WireEvent, 'kind'>) };
+      }
+      return { kind: 'note', ...(o.payload as Omit<WireNote, 'kind'>) };
+    });
 
     try {
       const res = (await mutateOnce(api.sync.pushOps, {
@@ -126,6 +131,9 @@ class SyncEngine {
         if (op.type.includes('Tab')) {
           const t = await local.getTab(op.entityId);
           if (t) await local.putTab({ ...t, syncedAt: a.updatedAt });
+        } else if (op.type.includes('Event')) {
+          const ev = await local.getEvent(op.entityId);
+          if (ev) await local.putEvent({ ...ev, syncedAt: a.updatedAt });
         } else {
           const n = await local.getNote(op.entityId);
           if (n) await local.putNote({ ...n, syncedAt: a.updatedAt });
@@ -163,6 +171,7 @@ class SyncEngine {
       })) as {
         tab: (Versioned & Record<string, unknown>) | null;
         notes: (Versioned & Record<string, unknown>)[];
+        events?: (Versioned & Record<string, unknown>)[];
         authors?: Record<string, string>;
         serverNow: number;
       };
@@ -197,6 +206,21 @@ class SyncEngine {
         }
       }
 
+      if (res.events?.length) {
+        const localEvents = (await local.getAllEvents()).filter((e) => e.tabId === entry.id);
+        const merged = mergeBatch<Versioned>(
+          localEvents as unknown as Versioned[],
+          res.events as Versioned[],
+        );
+        if (merged.toWrite.length) {
+          const rows = merged.toWrite.map((r) =>
+            remoteToEvent(r as Versioned & Record<string, unknown>, entry.id, localEvents),
+          );
+          await local.putEvents(rows);
+          changed = true;
+        }
+      }
+
       await local.setMeta(sinceKey, res.serverNow);
     }
 
@@ -221,6 +245,27 @@ function remoteToTab(
     archived: (r.archived as boolean | undefined) ?? prev?.archived ?? false,
     createdAt: prev?.createdAt ?? r.updatedAt,
     updatedAt: r.updatedAt,
+    deleted: r.deleted,
+    syncedAt: r.updatedAt,
+  };
+}
+
+function remoteToEvent(
+  r: Versioned & Record<string, unknown>,
+  tabId: string,
+  siblings: CalendarEvent[],
+): CalendarEvent {
+  const prev = siblings.find((e) => e.id === r.id);
+  return {
+    id: r.id,
+    tabId,
+    title: (r.title as string) ?? prev?.title ?? '',
+    startDate: (r.startDate as number) ?? prev?.startDate ?? r.updatedAt,
+    endDate: (r.endDate as number) ?? prev?.endDate ?? r.updatedAt,
+    color: (r.color as string | null) ?? prev?.color ?? null,
+    createdAt: prev?.createdAt ?? r.updatedAt,
+    updatedAt: r.updatedAt,
+    createdBy: (r.createdBy as string | null) ?? prev?.createdBy ?? null,
     deleted: r.deleted,
     syncedAt: r.updatedAt,
   };

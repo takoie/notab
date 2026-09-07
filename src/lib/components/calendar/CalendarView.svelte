@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight, CalendarDays } from '@lucide/svelte';
+  import { ChevronLeft, ChevronRight, CalendarDays, CalendarPlus } from '@lucide/svelte';
   import { notab } from '$lib/stores/notab.svelte';
   import { monthGrid, monthTitle } from '$lib/date';
   import { groupEventsByDay } from '$lib/calendar';
   import Modal from '../ui/Modal.svelte';
   import NoteRow from '../NoteRow.svelte';
   import CalendarGrid from './CalendarGrid.svelte';
+  import EventDialog from './EventDialog.svelte';
   import { calendarDrag } from './drag.svelte';
 
   const start = new Date();
@@ -15,6 +16,38 @@
   const days = $derived(monthGrid(year, month));
   const eventsByDay = $derived(groupEventsByDay(notab.notes));
   const title = $derived(monthTitle(year, month));
+
+  // standalone calendar events, bucketed into every grid day they cover
+  const DAY = 86_400_000;
+  const eventBarsByDay = $derived.by(() => {
+    const map = new Map<number, typeof notab.visibleEvents>();
+    if (days.length === 0) return map;
+    const gridStart = days[0];
+    const gridEnd = days[days.length - 1];
+    for (const ev of notab.eventsInRange(gridStart, gridEnd)) {
+      for (let d = Math.max(ev.startDate, gridStart); d <= Math.min(ev.endDate, gridEnd); d += DAY) {
+        // snap to the nearest grid day (guards against DST drift)
+        const key = days.find((x) => Math.abs(x - d) < DAY / 2);
+        if (key == null) continue;
+        let arr = map.get(key);
+        if (!arr) map.set(key, (arr = []));
+        arr.push(ev);
+      }
+    }
+    return map;
+  });
+
+  let eventDialogOpen = $state(false);
+  let editEventId = $state<string | null>(null);
+
+  function newEvent() {
+    editEventId = null;
+    eventDialogOpen = true;
+  }
+  function editEvent(id: string) {
+    editEventId = id;
+    eventDialogOpen = true;
+  }
 
   let openNoteId = $state<string | null>(null);
   const openNote = $derived(
@@ -84,10 +117,27 @@
     >
       I dag
     </button>
+
+    <button
+      type="button"
+      class="ml-auto flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-accent-ink transition-[filter] hover:brightness-105"
+      onclick={newEvent}
+    >
+      <CalendarPlus size={14} /> Hendelse
+    </button>
   </div>
 
-  <CalendarGrid {days} {month} {eventsByDay} onopen={(id) => (openNoteId = id)} />
+  <CalendarGrid
+    {days}
+    {month}
+    {eventsByDay}
+    {eventBarsByDay}
+    onopen={(id) => (openNoteId = id)}
+    oneditevent={editEvent}
+  />
 </div>
+
+<EventDialog bind:open={eventDialogOpen} eventId={editEventId} />
 
 {#if calendarDrag.active}
   <div

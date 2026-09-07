@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Note } from '$lib/types';
+  import type { Note, CalendarEvent } from '$lib/types';
   import { isoWeek, startOfToday } from '$lib/date';
   import DayCell from './DayCell.svelte';
 
@@ -7,12 +7,16 @@
     days,
     month,
     eventsByDay,
+    eventBarsByDay = new Map(),
     onopen,
+    oneditevent,
   }: {
     days: number[];
     month: number;
     eventsByDay: Map<number, Note[]>;
+    eventBarsByDay?: Map<number, CalendarEvent[]>;
     onopen: (id: string) => void;
+    oneditevent?: (id: string) => void;
   } = $props();
 
   const WEEKDAYS = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
@@ -47,7 +51,9 @@
           inMonth={new Date(ts).getMonth() === month}
           isToday={ts === today}
           events={eventsByDay.get(ts) ?? []}
+          dayEvents={eventBarsByDay.get(ts) ?? []}
           {onopen}
+          {oneditevent}
         />
       {/each}
     {/each}

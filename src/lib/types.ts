@@ -54,11 +54,35 @@ export interface Note {
   syncedAt: number;
 }
 
+/**
+ * A calendar event that is independent of any note. It may be linked to a tab —
+ * when it is, it rides that tab's sync channel so collaborators see it too;
+ * an unlinked event stays local to this device.
+ */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  /** start-of-day epoch ms */
+  startDate: number;
+  /** start-of-day epoch ms, inclusive (== startDate for a single-day event) */
+  endDate: number;
+  /** tab this event syncs with, or null for a local-only event */
+  tabId: string | null;
+  color: string | null;
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string | null;
+  deleted: boolean;
+  syncedAt: number;
+}
+
 export type OutboxOpType =
   | 'upsertTab'
   | 'deleteTab'
   | 'upsertNote'
-  | 'deleteNote';
+  | 'deleteNote'
+  | 'upsertEvent'
+  | 'deleteEvent';
 
 export interface OutboxOp {
   /** autoincrement key */

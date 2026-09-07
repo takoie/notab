@@ -34,6 +34,18 @@ const noteOp = v.object({
   clientUpdatedAt: v.number(),
 });
 
+const eventOp = v.object({
+  kind: v.literal('event'),
+  id: v.string(),
+  tabId: v.string(),
+  title: v.string(),
+  startDate: v.number(),
+  endDate: v.number(),
+  color: v.union(v.string(), v.null()),
+  deleted: v.boolean(),
+  clientUpdatedAt: v.number(),
+});
+
 /**
  * Apply a batch of client ops with whole-record last-write-wins.
  * Returns, per op id, the authoritative `updatedAt` the server settled on.
@@ -41,7 +53,7 @@ const noteOp = v.object({
 export const pushOps = mutation({
   args: {
     token: v.string(),
-    ops: v.array(v.union(tabOp, noteOp)),
+    ops: v.array(v.union(tabOp, noteOp, eventOp)),
   },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
@@ -89,7 +101,7 @@ export const pushOps = mutation({
           updatedAt: now,
         });
         applied.push({ id: op.id, updatedAt: now, skipped: false });
-      } else {
+      } else if (op.kind === 'note') {
         await requireTabAccess(ctx, userId, op.tabId);
         const existing = await ctx.db
           .query('notes')
@@ -138,6 +150,45 @@ export const pushOps = mutation({
           updatedAt: now,
         });
         applied.push({ id: op.id, updatedAt: now, skipped: false });
+      } else {
+        await requireTabAccess(ctx, userId, op.tabId);
+        const existing = await ctx.db
+          .query('events')
+          .withIndex('by_cid', (q) => q.eq('cid', op.id))
+          .unique();
+
+        if (!existing) {
+          const now = Math.max(op.clientUpdatedAt, Date.now());
+          await ctx.db.insert('events', {
+            cid: op.id,
+            tabCid: op.tabId,
+            title: op.title,
+            startDate: op.startDate,
+            endDate: op.endDate,
+            color: op.color,
+            createdAt: now,
+            updatedAt: now,
+            createdBy: userId,
+            deleted: op.deleted,
+          });
+          applied.push({ id: op.id, updatedAt: now, skipped: false });
+          continue;
+        }
+
+        if (existing.updatedAt > op.clientUpdatedAt) {
+          applied.push({ id: op.id, updatedAt: existing.updatedAt, skipped: true });
+          continue;
+        }
+        const now = Math.max(op.clientUpdatedAt, Date.now());
+        await ctx.db.patch(existing._id, {
+          title: op.title,
+          startDate: op.startDate,
+          endDate: op.endDate,
+          color: op.color,
+          deleted: op.deleted,
+          updatedAt: now,
+        });
+        applied.push({ id: op.id, updatedAt: now, skipped: false });
       }
     }
 
@@ -159,6 +210,13 @@ export const pullTab = query({
 
     const notes = await ctx.db
       .query('notes')
+      .withIndex('by_tab_updated', (q) =>
+        q.eq('tabCid', args.tabCid).gt('updatedAt', args.since),
+      )
+      .collect();
+
+    const events = await ctx.db
+      .query('events')
       .withIndex('by_tab_updated', (q) =>
         q.eq('tabCid', args.tabCid).gt('updatedAt', args.since),
       )
@@ -205,6 +263,17 @@ export const pullTab = query({
         createdBy: n.createdBy ?? null,
         deleted: n.deleted,
         updatedAt: n.updatedAt,
+      })),
+      events: events.map((e) => ({
+        id: e.cid,
+        tabId: e.tabCid,
+        title: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        color: e.color,
+        createdBy: e.createdBy ?? null,
+        deleted: e.deleted,
+        updatedAt: e.updatedAt,
       })),
       serverNow: Date.now(),
     };

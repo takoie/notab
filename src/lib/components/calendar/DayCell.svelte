@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Plus } from '@lucide/svelte';
-  import type { Note } from '$lib/types';
+  import type { Note, CalendarEvent } from '$lib/types';
   import { cn } from '$lib/cn';
+  import { tint } from '$lib/colors';
   import Popover from '../ui/Popover.svelte';
   import EventChip from './EventChip.svelte';
   import QuickCreatePopover from './QuickCreatePopover.svelte';
@@ -12,14 +13,20 @@
     inMonth,
     isToday,
     events,
+    dayEvents = [],
     onopen,
+    oneditevent,
   }: {
     ts: number;
     inMonth: boolean;
     isToday: boolean;
     events: Note[];
+    dayEvents?: CalendarEvent[];
     onopen: (id: string) => void;
+    oneditevent?: (id: string) => void;
   } = $props();
+
+  const DAY = 86_400_000;
 
   const MAX = 3;
   const shown = $derived(events.slice(0, MAX));
@@ -62,6 +69,29 @@
       <Plus size={13} />
     </button>
   </div>
+
+  {#if dayEvents.length}
+    <div class="flex flex-col gap-0.5">
+      {#each dayEvents as ev (ev.id)}
+        {@const isStart = Math.abs(ev.startDate - ts) < DAY / 2}
+        {@const isEnd = Math.abs(ev.endDate - ts) < DAY / 2}
+        <button
+          type="button"
+          class={cn(
+            '-mx-1 flex h-[18px] items-center truncate px-1.5 text-left text-[11px] font-medium leading-none transition-[filter] hover:brightness-95',
+            isStart && 'ml-0 rounded-l',
+            isEnd && 'mr-0 rounded-r',
+            ev.color ? 'text-ink' : 'bg-accent-soft text-accent',
+          )}
+          style:background-color={ev.color ? tint(ev.color, 22) : undefined}
+          title={ev.title}
+          onclick={() => oneditevent?.(ev.id)}
+        >
+          {#if isStart}{ev.title}{:else}&nbsp;{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   <div class="flex min-h-0 flex-col gap-0.5 overflow-hidden">
     {#each shown as note (note.id)}

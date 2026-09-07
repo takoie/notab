@@ -1,9 +1,10 @@
-import type { Importance, Note, OutboxOp, SortMode, Tab } from '../types';
+import type { CalendarEvent, Importance, Note, OutboxOp, SortMode, Tab } from '../types';
 import { newId } from '../ids';
 import { orderKeyAfter, orderKeyBetween, sortNotes } from '../order';
 import { firstLine } from '../richtext';
+import { startOfDay } from '../date';
 import * as local from '../db/local';
-import { noteToWire, tabToWire } from '../sync/reconcile';
+import { eventToWire, noteToWire, tabToWire } from '../sync/reconcile';
 import { emit, emitCrossOnly, on } from '../sync/bus';
 import { session } from './session.svelte';
 
@@ -66,6 +67,7 @@ function freshNote(
 class NotabStore {
   tabs = $state<Tab[]>([]);
   notes = $state<Note[]>([]);
+  events = $state<CalendarEvent[]>([]);
   loaded = $state(false);
   activeTabId = $state<string | null>(null);
   /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
@@ -157,13 +159,104 @@ class NotabStore {
   }
 
   async reload() {
-    const [tabs, notes] = await Promise.all([local.getAllTabs(), local.getAllNotes()]);
+    const [tabs, notes, events] = await Promise.all([
+      local.getAllTabs(),
+      local.getAllNotes(),
+      local.getAllEvents(),
+    ]);
     this.tabs = tabs;
     this.notes = notes;
+    this.events = events;
     this.#byId = new Map(notes.map((n) => [n.id, n]));
     if (this.activeTabId && !this.visibleTabs.some((t) => t.id === this.activeTabId)) {
       this.activeTabId = this.visibleTabs[0]?.id ?? null;
     }
+  }
+
+  /* ---------------- calendar events ---------------- */
+
+  visibleEvents = $derived(this.events.filter((e) => !e.deleted));
+
+  getEvent(id: string): CalendarEvent | undefined {
+    return this.events.find((e) => e.id === id);
+  }
+
+  /** events overlapping [rangeStart, rangeEnd] (both start-of-day epoch ms) */
+  eventsInRange(rangeStart: number, rangeEnd: number): CalendarEvent[] {
+    return this.visibleEvents
+      .filter((e) => e.startDate <= rangeEnd && e.endDate >= rangeStart)
+      .sort((a, b) => a.startDate - b.startDate || a.endDate - b.endDate);
+  }
+
+  async #commitEvent(ev: CalendarEvent, opType: 'upsertEvent' | 'deleteEvent' = 'upsertEvent') {
+    const row: CalendarEvent = { ...ev, updatedAt: now() };
+    this.events = upsert(this.events, row);
+    await local.putEvent(row);
+    if (row.tabId) {
+      await this.#enqueue({
+        type: opType,
+        tabId: row.tabId,
+        entityId: row.id,
+        payload: eventToWire(row),
+        clientUpdatedAt: row.updatedAt,
+        tries: 0,
+        nextAttemptAt: 0,
+      });
+      emitCrossOnly({ kind: 'remote-change', tabId: row.tabId });
+    }
+    emit({ kind: 'local-change' });
+  }
+
+  async addEvent(data: {
+    title: string;
+    startDate: number;
+    endDate: number;
+    tabId: string | null;
+    color?: string | null;
+  }): Promise<CalendarEvent | null> {
+    const title = data.title.trim();
+    if (!title) return null;
+    const a = startOfDay(data.startDate);
+    const b = startOfDay(data.endDate);
+    const t = now();
+    const ev: CalendarEvent = {
+      id: newId(),
+      title,
+      startDate: Math.min(a, b),
+      endDate: Math.max(a, b),
+      tabId: data.tabId,
+      color: data.color ?? null,
+      createdAt: t,
+      updatedAt: t,
+      createdBy: session.userId,
+      deleted: false,
+      syncedAt: 0,
+    };
+    await this.#commitEvent(ev);
+    return ev;
+  }
+
+  async updateEvent(
+    id: string,
+    patch: Partial<Pick<CalendarEvent, 'title' | 'startDate' | 'endDate' | 'tabId' | 'color'>>,
+  ) {
+    const ev = this.getEvent(id);
+    if (!ev) return;
+    const next = { ...ev, ...patch };
+    if (patch.startDate != null) next.startDate = startOfDay(patch.startDate);
+    if (patch.endDate != null) next.endDate = startOfDay(patch.endDate);
+    if (next.endDate < next.startDate) {
+      const s = next.startDate;
+      next.startDate = next.endDate;
+      next.endDate = s;
+    }
+    await this.#commitEvent(next);
+  }
+
+  async deleteEvent(id: string) {
+    const ev = this.getEvent(id);
+    if (!ev) return;
+    await this.#commitEvent({ ...ev, deleted: true }, 'deleteEvent');
   }
 
   notesForTab(tabId: string): Note[] {

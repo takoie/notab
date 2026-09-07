@@ -179,6 +179,52 @@ describe('NotabStore — local core', () => {
     expect(secs[1].notes.map((n) => n.title)).toEqual(['A']);
   });
 
+  it('creates a multi-day calendar event and finds it in range', async () => {
+    const d0 = Date.UTC(2026, 5, 10);
+    const d2 = Date.UTC(2026, 5, 12);
+    const ev = await notab.addEvent({
+      title: 'Ferie',
+      startDate: d2,
+      endDate: d0, // deliberately reversed — should be normalised
+      tabId: null,
+      color: '#3ab082',
+    });
+    expect(ev).toBeTruthy();
+    expect(ev!.startDate).toBeLessThan(ev!.endDate);
+    const hit = notab.eventsInRange(Date.UTC(2026, 5, 11), Date.UTC(2026, 5, 11));
+    expect(hit.map((e) => e.title)).toContain('Ferie');
+    const miss = notab.eventsInRange(Date.UTC(2026, 5, 20), Date.UTC(2026, 5, 21));
+    expect(miss).toHaveLength(0);
+  });
+
+  it('local-only events queue no outbox op; tab-linked ones do', async () => {
+    const tab = await notab.createTab('Delt');
+    await notab.addEvent({ title: 'Lokal', startDate: Date.now(), endDate: Date.now(), tabId: null });
+    const before = (await allOps()).filter((o) => o.type.includes('Event')).length;
+    expect(before).toBe(0);
+    await notab.addEvent({
+      title: 'Synket',
+      startDate: Date.now(),
+      endDate: Date.now(),
+      tabId: tab.id,
+    });
+    const after = (await allOps()).filter((o) => o.type === 'upsertEvent');
+    expect(after).toHaveLength(1);
+    expect(after[0].tabId).toBe(tab.id);
+  });
+
+  it('soft-deletes an event', async () => {
+    const ev = await notab.addEvent({
+      title: 'X',
+      startDate: Date.now(),
+      endDate: Date.now(),
+      tabId: null,
+    });
+    await notab.deleteEvent(ev!.id);
+    expect(notab.visibleEvents.find((e) => e.id === ev!.id)).toBeUndefined();
+    expect(notab.getEvent(ev!.id)?.deleted).toBe(true);
+  });
+
   it('pins and unpins a note without a tombstone', async () => {
     const tab = await notab.createTab('X');
     const a = await notab.addNote(tab.id, 'A');

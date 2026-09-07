@@ -1,9 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Tab, Note, OutboxOp, MetaRow } from '../types';
+import type { Tab, Note, CalendarEvent, OutboxOp, MetaRow } from '../types';
 
 interface NotabDB extends DBSchema {
   tabs: { key: string; value: Tab };
   notes: { key: string; value: Note; indexes: { by_tab: string } };
+  events: { key: string; value: CalendarEvent; indexes: { by_tab: string } };
   outbox: { key: number; value: OutboxOp; indexes: { by_next: number } };
   meta: { key: string; value: MetaRow };
 }
@@ -12,17 +13,23 @@ let dbp: Promise<IDBPDatabase<NotabDB>> | null = null;
 
 export function db(): Promise<IDBPDatabase<NotabDB>> {
   if (!dbp) {
-    dbp = openDB<NotabDB>('notab', 1, {
-      upgrade(database) {
-        database.createObjectStore('tabs', { keyPath: 'id' });
-        const notes = database.createObjectStore('notes', { keyPath: 'id' });
-        notes.createIndex('by_tab', 'tabId');
-        const outbox = database.createObjectStore('outbox', {
-          keyPath: 'seq',
-          autoIncrement: true,
-        });
-        outbox.createIndex('by_next', 'nextAttemptAt');
-        database.createObjectStore('meta', { keyPath: 'key' });
+    dbp = openDB<NotabDB>('notab', 2, {
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          database.createObjectStore('tabs', { keyPath: 'id' });
+          const notes = database.createObjectStore('notes', { keyPath: 'id' });
+          notes.createIndex('by_tab', 'tabId');
+          const outbox = database.createObjectStore('outbox', {
+            keyPath: 'seq',
+            autoIncrement: true,
+          });
+          outbox.createIndex('by_next', 'nextAttemptAt');
+          database.createObjectStore('meta', { keyPath: 'key' });
+        }
+        if (oldVersion < 2) {
+          const events = database.createObjectStore('events', { keyPath: 'id' });
+          events.createIndex('by_tab', 'tabId');
+        }
       },
     });
   }
@@ -89,6 +96,26 @@ export async function hardDeleteTabCascade(tabId: string): Promise<void> {
   await tx.done;
 }
 
+/* ---------- calendar events ---------- */
+
+export async function getAllEvents(): Promise<CalendarEvent[]> {
+  return (await db()).getAll('events');
+}
+
+export async function getEvent(id: string): Promise<CalendarEvent | undefined> {
+  return (await db()).get('events', id);
+}
+
+export async function putEvent(ev: CalendarEvent): Promise<void> {
+  await (await db()).put('events', ev);
+}
+
+export async function putEvents(evs: CalendarEvent[]): Promise<void> {
+  if (evs.length === 0) return;
+  const tx = (await db()).transaction('events', 'readwrite');
+  await Promise.all([...evs.map((e) => tx.store.put(e)), tx.done]);
+}
+
 /* ---------- outbox ---------- */
 
 export async function enqueueOp(op: OutboxOp): Promise<void> {
@@ -132,6 +159,7 @@ export async function _resetForTests(): Promise<void> {
   await Promise.all([
     database.clear('tabs'),
     database.clear('notes'),
+    database.clear('events'),
     database.clear('outbox'),
     database.clear('meta'),
   ]);
