@@ -7,6 +7,15 @@ installasjoner oppdatere seg selv (med toast-varsel i appen).
 
 ## ⚡ Rask 1-2-3
 
+### 0. Deploy Convex FØRST hvis backend er endret
+Har `convex/schema.ts` eller `convex/*.ts` endret seg siden forrige deploy
+(nye tabeller, nye felt, ny op-type), **må** du deploye før releasen — ellers
+avviser serveren de nye synk-operasjonene og brukere mister data:
+```powershell
+npx convex deploy      # prod-deployment (den appen bygges mot)
+```
+`npm run release` gjør IKKE dette.
+
 ### 1. Bestem versjonsnummer
 Semver `x.y.z`, f.eks. `0.2.0`. Du trenger **ikke** redigere filer manuelt —
 `npm run release` bumper `package.json`, `src-tauri/tauri.conf.json` og
