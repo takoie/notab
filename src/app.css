@@ -163,10 +163,22 @@ body {
   padding: 0 0.1em;
 }
 
-/* MathLive editor field inside the math popover */
+/* MathLive editor field inside the math popover — theme-aware colours */
 math-field {
   --primary: rgb(var(--c-accent));
-  --caret: rgb(var(--c-accent));
+  --caret-color: rgb(var(--c-accent));
+  --selection-background-color: rgb(var(--c-accent) / 0.25);
+  --selection-color: rgb(var(--c-ink));
+  --contains-highlight-background-color: rgb(var(--c-accent) / 0.1);
+  --text-highlight-background-color: rgb(var(--c-warn) / 0.3);
+  --placeholder-color: rgb(var(--c-ink-faint));
+  --box-placeholder-color: rgb(var(--c-ink-faint));
+  color: rgb(var(--c-ink));
+  background-color: rgb(var(--c-surface));
+}
+math-field::part(virtual-keyboard-toggle),
+math-field::part(menu-toggle) {
+  color: rgb(var(--c-ink-faint));
 }
 
 /* shared popover / hover-box — grows out of its anchor */
