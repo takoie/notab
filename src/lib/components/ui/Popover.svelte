@@ -81,7 +81,7 @@
     role="dialog"
     aria-label={label}
     class={cn(
-      'notab-popover fixed z-[60] min-w-[10rem] rounded-xl border border-border bg-surface-raised p-1 text-[13px] text-ink shadow-pop',
+      'notab-popover fixed z-[60] min-w-[10rem] rounded-[14px] border border-border bg-surface-raised p-1.5 text-[13px] text-ink shadow-pop ring-1 ring-black/[0.04] dark:ring-white/[0.04]',
       klass,
     )}
     style:left="{pos.left}px"

@@ -10,7 +10,7 @@
     children,
     trailing,
   }: {
-    icon?: Component<{ size?: number }>;
+    icon?: Component<{ size?: number; class?: string }>;
     danger?: boolean;
     active?: boolean;
     onclick?: (e: MouseEvent) => void;
@@ -23,13 +23,24 @@
 
 <button
   class={cn(
-    'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors',
-    danger ? 'text-danger hover:bg-danger/10' : 'text-ink hover:bg-surface-sunken',
-    active && !danger && 'text-accent',
+    'group/mi flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-[7px] text-left text-[13px] transition-colors',
+    danger
+      ? 'text-danger hover:bg-danger/10'
+      : active
+        ? 'bg-accent-soft text-accent'
+        : 'text-ink hover:bg-surface-sunken',
   )}
   {onclick}
 >
-  {#if Icon}<Icon size={14} />{/if}
+  {#if Icon}
+    <Icon
+      size={14}
+      class={cn(
+        'shrink-0',
+        danger ? '' : active ? 'text-accent' : 'text-ink-faint group-hover/mi:text-ink-soft',
+      )}
+    />
+  {/if}
   <span class="flex-1 truncate">{@render children()}</span>
   {#if trailing}{@render trailing()}{/if}
 </button>
