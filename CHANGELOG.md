@@ -4,6 +4,9 @@ Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
 ## Ikke utgitt
 
+- Trykk utenfor et notat under redigering for å lagre og lukke det.
+- Onboarding: første fane får et skikkelig navn via en liten velkomst i
+  stedet for et standardnavn.
 - Autolagring: halvskrevne notater i komposit­øren og inline-redigering
   lagres lokalt og hentes tilbake etter navigering eller omstart.
 - Slettebekreftelse på notater.
