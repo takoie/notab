@@ -20,16 +20,17 @@
   let startTs = $state<number>(startOfToday());
   let endTs = $state<number>(startOfToday());
   let tabId = $state<string | null>(null);
+  let noTab = $state(false);
   let color = $state<string | null>(null);
   let busy = $state(false);
 
   let delBtn = $state<HTMLButtonElement | undefined>();
   let confirmOpen = $state(false);
 
-  const tabOptions = $derived([
-    ...notab.visibleTabs.map((t) => ({ value: t.id, label: t.name })),
-    { value: '', label: 'Ingen — bare lokalt (synkes ikke)' },
-  ]);
+  const tabOptions = $derived(
+    notab.visibleTabs.map((t) => ({ value: t.id, label: t.name })),
+  );
+  const effectiveTabId = $derived(noTab ? null : tabId);
 
   // (re)load fields whenever the dialog opens
   $effect(() => {
@@ -38,10 +39,10 @@
     title = ev?.title ?? '';
     startTs = ev?.startDate ?? defaultDate ?? startOfToday();
     endTs = ev?.endDate ?? defaultDate ?? startOfToday();
-    // new events default to the current tab so they sync + get backed up
-    tabId = ev
-      ? ev.tabId
-      : (notab.activeTab?.id ?? notab.visibleTabs[0]?.id ?? null);
+    noTab = ev ? ev.tabId == null : false;
+    // pick a real tab to fall back to (used unless "ikke koble til fane")
+    tabId =
+      ev?.tabId ?? notab.activeTab?.id ?? notab.visibleTabs[0]?.id ?? null;
     color = ev?.color ?? null;
   });
 
@@ -54,7 +55,7 @@
           title: title.trim(),
           startDate: startTs,
           endDate: endTs,
-          tabId,
+          tabId: effectiveTabId,
           color,
         });
       } else {
@@ -62,11 +63,11 @@
           title: title.trim(),
           startDate: startTs,
           endDate: endTs,
-          tabId,
+          tabId: effectiveTabId,
           color,
         });
       }
-      if (!tabId) {
+      if (!effectiveTabId) {
         toasts.push(
           'Hendelsen er ikke koblet til en fane — den lagres bare på denne enheten.',
           'info',
@@ -135,12 +136,19 @@
         value={tabId ?? ''}
         options={tabOptions}
         label="Fane"
+        placeholder="Velg fane …"
+        disabled={noTab}
         class="mt-1 w-full"
         onChange={(v) => (tabId = v || null)}
       />
+      <label class="mt-2 flex items-center gap-2 text-[12px] text-ink-soft">
+        <input type="checkbox" bind:checked={noTab} />
+        Ikke koble til en fane
+      </label>
       <p class="mt-1 text-[11px] text-ink-faint">
-        En hendelse må kobles til en fane for å synkroniseres og sikkerhets­kopieres.
-        «Ingen» lagres bare på denne enheten.
+        {noTab
+          ? 'Hendelsen lagres bare på denne enheten (synkes ikke, sikkerhetskopieres ikke).'
+          : 'Koblet til en fane synkroniseres hendelsen og deles med de som har fanen.'}
       </p>
     </div>
 
