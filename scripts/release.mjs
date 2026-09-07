@@ -201,10 +201,19 @@ async function main() {
   const bundle = join(ROOT, 'src-tauri/target/release/bundle');
   const nsisDir = join(bundle, 'nsis');
   const msiDir = join(bundle, 'msi');
-  const setupExe = readdirSync(nsisDir).find((f) => f.endsWith('-setup.exe'));
-  const sigFile = readdirSync(nsisDir).find((f) => f.endsWith('-setup.exe.sig'));
-  const msi = readdirSync(msiDir).find((f) => f.endsWith('.msi'));
-  if (!setupExe || !sigFile) fail(`Could not find NSIS installer / .sig in ${nsisDir}`);
+  // match THIS version's files — the bundle dir keeps older builds around, and
+  // a bare `.endsWith('-setup.exe')` would pick whichever sorts first.
+  const verTag = `_${version}_x64`;
+  const setupExe = readdirSync(nsisDir).find(
+    (f) => f.includes(verTag) && f.endsWith('-setup.exe'),
+  );
+  const sigFile = readdirSync(nsisDir).find(
+    (f) => f.includes(verTag) && f.endsWith('-setup.exe.sig'),
+  );
+  const msi = readdirSync(msiDir).find((f) => f.includes(verTag) && f.endsWith('.msi'));
+  if (!setupExe || !sigFile) {
+    fail(`Could not find the ${version} NSIS installer / .sig in ${nsisDir}`);
+  }
 
   const signature = readFileSync(join(nsisDir, sigFile), 'utf8').trim();
   let latest = buildLatestJson({
@@ -232,7 +241,9 @@ async function main() {
 
   // 8. reconcile the installer's real asset URL (GitHub can rewrite "NotaB!" etc.)
   const uploaded = JSON.parse(capture('gh', ['release', 'view', tag, '--json', 'assets']));
-  const realExe = uploaded.assets.find((a) => a.name.endsWith('-setup.exe'));
+  const realExe = uploaded.assets.find(
+    (a) => a.name.includes(version) && a.name.endsWith('-setup.exe'),
+  );
   if (realExe && realExe.url !== latest.platforms['windows-x86_64'].url) {
     console.log(`\nPatching latest.json installer URL →\n  ${realExe.url}`);
     latest.platforms['windows-x86_64'].url = realExe.url;
