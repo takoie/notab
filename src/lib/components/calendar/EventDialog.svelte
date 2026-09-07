@@ -27,8 +27,8 @@
   let confirmOpen = $state(false);
 
   const tabOptions = $derived([
-    { value: '', label: '— Ingen (bare på denne enheten)' },
     ...notab.visibleTabs.map((t) => ({ value: t.id, label: t.name })),
+    { value: '', label: 'Ingen — bare lokalt (synkes ikke)' },
   ]);
 
   // (re)load fields whenever the dialog opens
@@ -38,7 +38,10 @@
     title = ev?.title ?? '';
     startTs = ev?.startDate ?? defaultDate ?? startOfToday();
     endTs = ev?.endDate ?? defaultDate ?? startOfToday();
-    tabId = ev?.tabId ?? null;
+    // new events default to the current tab so they sync + get backed up
+    tabId = ev
+      ? ev.tabId
+      : (notab.activeTab?.id ?? notab.visibleTabs[0]?.id ?? null);
     color = ev?.color ?? null;
   });
 
@@ -62,6 +65,13 @@
           tabId,
           color,
         });
+      }
+      if (!tabId) {
+        toasts.push(
+          'Hendelsen er ikke koblet til en fane — den lagres bare på denne enheten.',
+          'info',
+          5000,
+        );
       }
       open = false;
     } catch (e) {
@@ -129,7 +139,8 @@
         onChange={(v) => (tabId = v || null)}
       />
       <p class="mt-1 text-[11px] text-ink-faint">
-        Kobles til en fane deles hendelsen med de som har fanen.
+        En hendelse må kobles til en fane for å synkroniseres og sikkerhets­kopieres.
+        «Ingen» lagres bare på denne enheten.
       </p>
     </div>
 

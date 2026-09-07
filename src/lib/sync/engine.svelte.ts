@@ -1,4 +1,4 @@
-import type { SyncState, Tab, Note, CalendarEvent } from '../types';
+import type { SyncState, Tab, Note, CalendarEvent, OutboxOp } from '../types';
 import { api } from '../../../convex/_generated/api';
 import { convexConfigured, mutateOnce, queryOnce } from '../convex.svelte';
 import { session } from '../stores/session.svelte';
@@ -103,11 +103,39 @@ class SyncEngine {
   async flush(): Promise<void> {
     if (!convexConfigured || !session.signedIn || !this.token) return;
     const now = Date.now();
-    const ops = (await local.allOps())
-      .filter((o) => o.nextAttemptAt <= now)
-      .slice(0, 100);
-    if (ops.length === 0) return;
+    const due = (await local.allOps()).filter((o) => o.nextAttemptAt <= now);
+    if (due.length === 0) return;
 
+    // Fresh ops go up as one batch. Ops that have failed repeatedly get sent
+    // one at a time so a single rejected op (e.g. a stale server that doesn't
+    // know a newer op kind) can't keep blocking every healthy op behind it.
+    const fresh = due.filter((o) => o.tries < 3).slice(0, 100);
+    const stuck = due.filter((o) => o.tries >= 3).slice(0, 20);
+    const batches: OutboxOp[][] = [];
+    if (fresh.length) batches.push(fresh);
+    for (const s of stuck) batches.push([s]);
+
+    let anyOk = false;
+    let lastErr: unknown = null;
+    for (const batch of batches) {
+      try {
+        await this.#pushBatch(batch);
+        anyOk = true;
+      } catch (e) {
+        lastErr = e;
+        for (const op of batch) {
+          const tries = op.tries + 1;
+          await local.putOp({ ...op, tries, nextAttemptAt: Date.now() + backoff(tries) });
+        }
+      }
+    }
+    if (anyOk) emit({ kind: 'remote-change' });
+    if (!anyOk && lastErr) throw lastErr;
+  }
+
+  async #pushBatch(ops: OutboxOp[]): Promise<void> {
+    const token = this.token;
+    if (!token) return;
     const wire: WireOp[] = ops.map((o) => {
       if (o.type === 'upsertTab' || o.type === 'deleteTab') {
         return { kind: 'tab', ...(o.payload as Omit<WireTab, 'kind'>) };
@@ -118,35 +146,26 @@ class SyncEngine {
       return { kind: 'note', ...(o.payload as Omit<WireNote, 'kind'>) };
     });
 
-    try {
-      const res = (await mutateOnce(api.sync.pushOps, {
-        token: this.token,
-        ops: wire,
-      })) as { applied: { id: string; updatedAt: number; skipped: boolean }[] };
+    const res = (await mutateOnce(api.sync.pushOps, {
+      token,
+      ops: wire,
+    })) as { applied: { id: string; updatedAt: number; skipped: boolean }[] };
 
-      const appliedById = new Map(res.applied.map((a) => [a.id, a]));
-      for (const op of ops) {
-        const a = appliedById.get(op.entityId);
-        if (!a) continue;
-        if (op.type.includes('Tab')) {
-          const t = await local.getTab(op.entityId);
-          if (t) await local.putTab({ ...t, syncedAt: a.updatedAt });
-        } else if (op.type.includes('Event')) {
-          const ev = await local.getEvent(op.entityId);
-          if (ev) await local.putEvent({ ...ev, syncedAt: a.updatedAt });
-        } else {
-          const n = await local.getNote(op.entityId);
-          if (n) await local.putNote({ ...n, syncedAt: a.updatedAt });
-        }
-        if (op.seq !== undefined) await local.deleteOp(op.seq);
+    const appliedById = new Map(res.applied.map((a) => [a.id, a]));
+    for (const op of ops) {
+      const a = appliedById.get(op.entityId);
+      if (!a) continue;
+      if (op.type.includes('Tab')) {
+        const t = await local.getTab(op.entityId);
+        if (t) await local.putTab({ ...t, syncedAt: a.updatedAt });
+      } else if (op.type.includes('Event')) {
+        const ev = await local.getEvent(op.entityId);
+        if (ev) await local.putEvent({ ...ev, syncedAt: a.updatedAt });
+      } else {
+        const n = await local.getNote(op.entityId);
+        if (n) await local.putNote({ ...n, syncedAt: a.updatedAt });
       }
-      emit({ kind: 'remote-change' });
-    } catch (e) {
-      for (const op of ops) {
-        const tries = op.tries + 1;
-        await local.putOp({ ...op, tries, nextAttemptAt: Date.now() + backoff(tries) });
-      }
-      throw e;
+      if (op.seq !== undefined) await local.deleteOp(op.seq);
     }
   }
 
