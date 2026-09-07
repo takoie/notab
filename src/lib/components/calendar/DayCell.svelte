@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Plus } from '@lucide/svelte';
+  import { Plus, CalendarPlus, NotebookPen } from '@lucide/svelte';
   import type { Note, CalendarEvent } from '$lib/types';
   import { cn } from '$lib/cn';
   import { tint } from '$lib/colors';
   import Popover from '../ui/Popover.svelte';
+  import MenuItem from '../ui/MenuItem.svelte';
   import EventChip from './EventChip.svelte';
   import QuickCreatePopover from './QuickCreatePopover.svelte';
   import { calendarDrag } from './drag.svelte';
@@ -16,6 +17,7 @@
     dayEvents = [],
     onopen,
     oneditevent,
+    onnewevent,
   }: {
     ts: number;
     inMonth: boolean;
@@ -24,6 +26,7 @@
     dayEvents?: CalendarEvent[];
     onopen: (id: string) => void;
     oneditevent?: (id: string) => void;
+    onnewevent?: (ts: number) => void;
   } = $props();
 
   const DAY = 86_400_000;
@@ -36,17 +39,27 @@
 
   let addBtn = $state<HTMLButtonElement>();
   let moreBtn = $state<HTMLButtonElement>();
+  let cellEl = $state<HTMLDivElement>();
   let quickOpen = $state(false);
   let moreOpen = $state(false);
+  let ctxOpen = $state(false);
+
+  function onContext(e: MouseEvent) {
+    e.preventDefault();
+    ctxOpen = true;
+  }
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+  bind:this={cellEl}
   data-day={ts}
   class={cn(
     'group/cell flex min-h-0 flex-col gap-0.5 border-b border-r border-border/60 p-1',
     !inMonth && 'bg-surface-sunken/40',
     dropTarget && 'bg-accent-soft ring-2 ring-inset ring-accent',
   )}
+  oncontextmenu={onContext}
 >
   <div class="flex items-center justify-between">
     <span
@@ -111,6 +124,33 @@
 </div>
 
 <QuickCreatePopover anchor={addBtn} bind:open={quickOpen} {ts} />
+
+<Popover
+  anchor={cellEl}
+  bind:open={ctxOpen}
+  placement="bottom-start"
+  label="Ny på denne dagen"
+  class="w-44"
+>
+  <MenuItem
+    icon={CalendarPlus}
+    onclick={() => {
+      ctxOpen = false;
+      onnewevent?.(ts);
+    }}
+  >
+    Ny hendelse
+  </MenuItem>
+  <MenuItem
+    icon={NotebookPen}
+    onclick={() => {
+      ctxOpen = false;
+      quickOpen = true;
+    }}
+  >
+    Nytt notat
+  </MenuItem>
+</Popover>
 
 <Popover
   anchor={moreBtn}

@@ -39,13 +39,16 @@
 
   let eventDialogOpen = $state(false);
   let editEventId = $state<string | null>(null);
+  let eventDialogDate = $state<number | undefined>(undefined);
 
-  function newEvent() {
+  function newEvent(ts?: number) {
     editEventId = null;
+    eventDialogDate = ts;
     eventDialogOpen = true;
   }
   function editEvent(id: string) {
     editEventId = id;
+    eventDialogDate = undefined;
     eventDialogOpen = true;
   }
 
@@ -121,7 +124,7 @@
     <button
       type="button"
       class="ml-auto flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-accent-ink transition-[filter] hover:brightness-105"
-      onclick={newEvent}
+      onclick={() => newEvent()}
     >
       <CalendarPlus size={14} /> Hendelse
     </button>
@@ -134,10 +137,11 @@
     {eventBarsByDay}
     onopen={(id) => (openNoteId = id)}
     oneditevent={editEvent}
+    onnewevent={newEvent}
   />
 </div>
 
-<EventDialog bind:open={eventDialogOpen} eventId={editEventId} />
+<EventDialog bind:open={eventDialogOpen} eventId={editEventId} defaultDate={eventDialogDate} />
 
 {#if calendarDrag.active}
   <div

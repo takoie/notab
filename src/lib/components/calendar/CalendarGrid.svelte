@@ -10,6 +10,7 @@
     eventBarsByDay = new Map(),
     onopen,
     oneditevent,
+    onnewevent,
   }: {
     days: number[];
     month: number;
@@ -17,6 +18,7 @@
     eventBarsByDay?: Map<number, CalendarEvent[]>;
     onopen: (id: string) => void;
     oneditevent?: (id: string) => void;
+    onnewevent?: (ts: number) => void;
   } = $props();
 
   const WEEKDAYS = ['man', 'tir', 'ons', 'tor', 'fre', 'lør', 'søn'];
@@ -54,6 +56,7 @@
           dayEvents={eventBarsByDay.get(ts) ?? []}
           {onopen}
           {oneditevent}
+          {onnewevent}
         />
       {/each}
     {/each}
