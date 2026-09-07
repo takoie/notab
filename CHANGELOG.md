@@ -2,12 +2,9 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
-## Ikke utgitt
+## 0.4.0 — 2026-09-07
 
-- Lys modus er standard ved ny installasjon (kan fortsatt settes til
-  system/mørk).
-- Tema, korrekturspråk og visning speiles nå til Tauri-lageret i tillegg
-  til localStorage, så valgene overlever bedre ved oppdatering/reinstall.
+- Lys modus som standard ved ny installasjon; innstillinger (tema/språk/visning) speiles til Tauri-lageret så de overlever oppdatering. Egne tema-tilpassede tooltips i stedet for OS-boksene. Kalender: høyreklikk en dag for å opprette hendelse eller notat, scroll for å bla måneder, og notat-tooltip viser «fane – notat». Notat-tittelen er midtstilt på kortet, mer luft mellom header og tekst, ryddigere venstremarg. Oppusset popover- og menydesign. Diskret versjonsnummer i bunnlinja.
 
 ## 0.3.0 — 2026-09-07
 
