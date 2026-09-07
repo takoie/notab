@@ -271,7 +271,7 @@
 
       {#if !collapsed && (hasBody || authorName || note.dueDate != null || imgs.length)}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="mt-1 cursor-text" ondblclick={startEdit}>
+        <div class="mt-2.5 cursor-text" ondblclick={startEdit}>
           {#if hasBody}
             <div class={cn(note.done && 'text-ink-faint line-through')}>
               <RichContent
