@@ -71,6 +71,30 @@
     }
   }
 
+  // scroll wheel over the grid steps the month
+  let wheelAcc = 0;
+  let wheelLock = false;
+  function onWheel(e: WheelEvent) {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // horizontal gesture
+    wheelAcc += e.deltaY;
+    if (wheelLock) return;
+    if (wheelAcc > 60) {
+      next();
+      lockWheel();
+    } else if (wheelAcc < -60) {
+      prev();
+      lockWheel();
+    }
+  }
+  function lockWheel() {
+    wheelAcc = 0;
+    wheelLock = true;
+    setTimeout(() => {
+      wheelLock = false;
+      wheelAcc = 0;
+    }, 350);
+  }
+
   function next() {
     if (month === 11) {
       month = 0;
@@ -130,15 +154,18 @@
     </button>
   </div>
 
-  <CalendarGrid
-    {days}
-    {month}
-    {eventsByDay}
-    {eventBarsByDay}
-    onopen={(id) => (openNoteId = id)}
-    oneditevent={editEvent}
-    onnewevent={newEvent}
-  />
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="flex min-h-0 flex-1" onwheel={onWheel}>
+    <CalendarGrid
+      {days}
+      {month}
+      {eventsByDay}
+      {eventBarsByDay}
+      onopen={(id) => (openNoteId = id)}
+      oneditevent={editEvent}
+      onnewevent={newEvent}
+    />
+  </div>
 </div>
 
 <EventDialog bind:open={eventDialogOpen} eventId={editEventId} defaultDate={eventDialogDate} />
