@@ -1,4 +1,7 @@
+import { appStore } from '../tauri';
+
 const KEY = 'notab.proofLang';
+const SKEY = 'proofLang';
 
 export type ProofLang = 'off' | 'system' | 'nb' | 'nn' | 'en' | 'sv' | 'da' | 'de';
 
@@ -12,6 +15,10 @@ export const PROOF_LANGS: { value: ProofLang; label: string }[] = [
   { value: 'da', label: 'Dansk' },
   { value: 'de', label: 'Deutsch' },
 ];
+
+function isLang(v: unknown): v is ProofLang {
+  return typeof v === 'string' && PROOF_LANGS.some((l) => l.value === v);
+}
 
 class Settings {
   proofLang = $state<ProofLang>('system');
@@ -28,19 +35,48 @@ class Settings {
       : this.proofLang;
   }
 
-  init() {
+  async init() {
+    let local: ProofLang | null = null;
     try {
-      const saved = localStorage.getItem(KEY) as ProofLang | null;
-      if (saved && PROOF_LANGS.some((l) => l.value === saved)) this.proofLang = saved;
+      const v = localStorage.getItem(KEY);
+      if (isLang(v)) local = v;
     } catch {
       /* ignore */
+    }
+    if (local) this.proofLang = local;
+
+    if (!local) {
+      try {
+        const stored = await (await appStore()).get<ProofLang>(SKEY);
+        if (isLang(stored)) {
+          this.proofLang = stored;
+          this.#writeLocal(stored);
+        }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   setProofLang(value: ProofLang) {
     this.proofLang = value;
+    this.#writeLocal(value);
+    void this.#writeStore(value);
+  }
+
+  #writeLocal(value: ProofLang) {
     try {
       localStorage.setItem(KEY, value);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async #writeStore(value: ProofLang) {
+    try {
+      const s = await appStore();
+      await s.set(SKEY, value);
+      await s.save();
     } catch {
       /* ignore */
     }

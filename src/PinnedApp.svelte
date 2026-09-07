@@ -18,8 +18,8 @@
   let ready = $state(false);
 
   onMount(async () => {
-    theme.init();
-    settings.init();
+    void theme.init();
+    void settings.init();
     await notab.init();
     await lock.init();
     on((evt) => {

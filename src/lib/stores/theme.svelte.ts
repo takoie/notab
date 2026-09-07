@@ -1,22 +1,48 @@
+import { appStore } from '../tauri';
+
 const KEY = 'notab.theme';
+const SKEY = 'theme';
 export type ThemePref = 'light' | 'dark' | 'system';
+
+function isPref(v: unknown): v is ThemePref {
+  return v === 'light' || v === 'dark' || v === 'system';
+}
 
 function systemDark() {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
 }
 
 class Theme {
-  pref = $state<ThemePref>('system');
+  // fresh install defaults to light; the user can switch to system/dark
+  pref = $state<ThemePref>('light');
   resolved = $state<'light' | 'dark'>('light');
 
-  init() {
+  async init() {
+    // fast path — synchronous, no flash
+    let local: ThemePref | null = null;
     try {
-      const saved = localStorage.getItem(KEY) as ThemePref | null;
-      if (saved === 'light' || saved === 'dark' || saved === 'system') this.pref = saved;
+      const v = localStorage.getItem(KEY);
+      if (isPref(v)) local = v;
     } catch {
       /* ignore */
     }
+    if (local) this.pref = local;
     this.#apply();
+
+    // durable fallback: the Tauri store survives a WebView data wipe / reinstall
+    if (!local) {
+      try {
+        const stored = await (await appStore()).get<ThemePref>(SKEY);
+        if (isPref(stored)) {
+          this.pref = stored;
+          this.#apply();
+          this.#writeLocal(stored);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (this.pref === 'system') this.#apply();
     });
@@ -24,16 +50,31 @@ class Theme {
 
   set(pref: ThemePref) {
     this.pref = pref;
-    try {
-      localStorage.setItem(KEY, pref);
-    } catch {
-      /* ignore */
-    }
+    this.#writeLocal(pref);
+    void this.#writeStore(pref);
     this.#apply();
   }
 
   toggle() {
     this.set(this.resolved === 'dark' ? 'light' : 'dark');
+  }
+
+  #writeLocal(pref: ThemePref) {
+    try {
+      localStorage.setItem(KEY, pref);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async #writeStore(pref: ThemePref) {
+    try {
+      const s = await appStore();
+      await s.set(SKEY, pref);
+      await s.save();
+    } catch {
+      /* ignore */
+    }
   }
 
   #apply() {

@@ -40,9 +40,7 @@
   });
 
   onMount(async () => {
-    theme.init();
-    settings.init();
-    view.init();
+    await Promise.all([theme.init(), settings.init(), view.init()]);
     session.load();
     await notab.init();
     await lock.init();

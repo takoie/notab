@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## Ikke utgitt
+
+- Lys modus er standard ved ny installasjon (kan fortsatt settes til
+  system/mørk).
+- Tema, korrekturspråk og visning speiles nå til Tauri-lageret i tillegg
+  til localStorage, så valgene overlever bedre ved oppdatering/reinstall.
+
 ## 0.3.0 — 2026-09-07
 
 - Kalenderhendelser over flere dager, valgfritt koblet til en fane (synk
