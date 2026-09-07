@@ -4,6 +4,9 @@ Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
 ## Ikke utgitt
 
+- Matematikk: sett inn formler i et notat med et visuelt mattefelt
+  (MathLive), rendret i notatvisningen. Erstatter det gamle LaTeX-feltet.
+- Tekstfarge og uthevingsfarge i notat-editoren.
 - Trykk utenfor et notat under redigering for å lagre og lukke det.
 - Onboarding: første fane får et skikkelig navn via en liten velkomst i
   stedet for et standardnavn.

@@ -10,11 +10,11 @@ describe('sanitizeHtml', () => {
 
   it('strips scripts, event handlers and unknown tags but keeps their text', () => {
     const dirty =
-      '<p onclick="steal()">hei <script>alert(1)<\/script><span style="color:red">verden</span></p><img src=x>';
+      '<p onclick="steal()">hei <script>alert(1)<\/script><abbr title="x">verden</abbr></p><img src=x>';
     const clean = sanitizeHtml(dirty);
     expect(clean).not.toContain('script');
     expect(clean).not.toContain('onclick');
-    expect(clean).not.toContain('<span');
+    expect(clean).not.toContain('<abbr');
     expect(clean).not.toContain('<img');
     expect(htmlToText(clean)).toBe('hei verden');
   });
@@ -24,6 +24,32 @@ describe('sanitizeHtml', () => {
     const clean = sanitizeHtml(html);
     expect(clean).toContain('data-checklist');
     expect(clean).toContain('data-checked');
+  });
+
+  it('keeps text + highlight colour, drops other span styles', () => {
+    const clean = sanitizeHtml(
+      '<span style="color:#e0546c;font-size:99px">rød</span> <mark style="background-color: yellow">gul</mark>',
+    );
+    expect(clean).toContain('color: #e0546c');
+    expect(clean).not.toContain('font-size');
+    expect(clean).toContain('background-color: yellow');
+  });
+
+  it('normalises <font color> and unwraps bare spans', () => {
+    expect(sanitizeHtml('<font color="#123456">x</font>')).toContain('color: #123456');
+    expect(sanitizeHtml('<span>plain</span>')).toBe('plain');
+  });
+
+  it('keeps an inline math atom as data-latex text', () => {
+    const clean = sanitizeHtml('a <span data-latex="\\frac{a}{b}" contenteditable="false">x</span> b');
+    expect(clean).toContain('data-latex="\\frac{a}{b}"');
+    expect(clean).not.toContain('contenteditable');
+  });
+
+  it('scrubs javascript / url() from colour values', () => {
+    const clean = sanitizeHtml('<span style="color: url(javascript:alert(1))">x</span>');
+    expect(clean).not.toContain('javascript');
+    expect(clean).toBe('x');
   });
 });
 

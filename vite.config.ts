@@ -14,6 +14,8 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
 
   clearScreen: false,
+  // mathlive is a large but lazily-loaded chunk — the warning isn't actionable
+  build: { chunkSizeWarningLimit: 900 },
   server: {
     port: 1420,
     strictPort: true,

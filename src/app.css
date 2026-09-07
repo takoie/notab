@@ -139,6 +139,36 @@ body {
   transform: rotate(45deg);
 }
 
+/* inline math atoms — a pill while editing, real markup once rendered */
+.rich-body span[data-latex]:not([data-rendered]) {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  line-height: 1.2;
+  padding: 0 0.3em;
+  border-radius: 0.3rem;
+  background: rgb(var(--c-accent) / 0.12);
+  color: rgb(var(--c-accent));
+  white-space: nowrap;
+  cursor: default;
+}
+.rich-body span[data-latex][data-rendered] {
+  display: inline-block;
+  vertical-align: middle;
+}
+.rich-body mark {
+  background: rgb(var(--c-warn) / 0.35);
+  color: inherit;
+  border-radius: 0.15rem;
+  padding: 0 0.1em;
+}
+
+/* MathLive editor field inside the math popover */
+math-field {
+  --primary: rgb(var(--c-accent));
+  --caret: rgb(var(--c-accent));
+}
+
 /* shared popover / hover-box — grows out of its anchor */
 @keyframes notab-pop-in {
   from {

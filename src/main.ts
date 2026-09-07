@@ -1,5 +1,6 @@
 import './app.css';
-import 'katex/dist/katex.min.css';
+import 'mathlive/fonts.css';
+import 'mathlive/static.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
 import PinnedApp from './PinnedApp.svelte';
