@@ -100,7 +100,7 @@
     spellcheck={settings.spellcheck}
     lang={settings.lang}
     placeholder="Tittel"
-    class="mb-2 w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink outline-none focus:border-accent"
+    class="mb-2 w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-center text-[13px] font-semibold text-ink outline-none focus:border-accent"
     onkeydown={(e) => {
       if (e.key === 'Enter') {
         e.preventDefault();

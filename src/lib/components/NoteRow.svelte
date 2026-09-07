@@ -251,7 +251,7 @@
           {#if titleText}
             <p
               class={cn(
-                'text-[13px] font-semibold text-ink',
+                'text-center text-[13px] font-semibold text-ink',
                 note.done && 'text-ink-faint line-through',
               )}
             >
