@@ -2,28 +2,9 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
-## Ikke utgitt
+## 0.3.0 — 2026-09-07
 
-- Nye notater legges øverst i lista (manuell sortering).
-- Notater kan slås sammen til tittelen; egen «slå sammen alle»-knapp ved
-  sorteringsmenyen. Notatradene bruker mer av plassen til venstre.
-- Matematikk: sett inn formler i et notat med et visuelt mattefelt
-  (MathLive), rendret i notatvisningen. Klikk en formel i editoren for å
-  endre den. Erstatter det gamle LaTeX-feltet.
-- Tekstfarge og uthevingsfarge i notat-editoren.
-- Trykk utenfor et notat under redigering for å lagre og lukke det.
-- Onboarding: første fane får et skikkelig navn via en liten velkomst i
-  stedet for et standardnavn.
-- Autolagring: halvskrevne notater i komposit­øren og inline-redigering
-  lagres lokalt og hentes tilbake etter navigering eller omstart.
-- Slettebekreftelse på notater.
-- Notatfarge: eget fargevalg med fargestripe og bakgrunnstone på kortet.
-- Editor: emoji-velger og LaTeX-innsetting (KaTeX-rendring i notatvisning).
-- Korrekturspråk kan settes til «Av» for å slå av stavekontroll helt.
-- Festede popup-vinduer har minimer / maksimer / lukk og taskbar-knapp.
-- Notatrader bruker full bredde.
-- Kalenderhendelser: frittstående hendelser over flere dager, valgfritt
-  koblet til en fane (synk med de som har fanen).
+- Kalenderhendelser over flere dager (kan kobles til en fane), MathLive-mattefelt som erstatter LaTeX (klikk en formel for aa endre den), tekstfarge og uthevingsfarge i editoren, kollapsbare notater med slaa-sammen-alle-knapp, nye notater legges oeverst, autolagring av utkast, slettebekreftelse paa notater, notatfarge, emoji, onboarding for foerste fane, av-bryter for stavekontroll, min/maks/lukk paa festede vinduer, klikk utenfor et notat for aa lagre og lukke.
 
 ## 0.2.0 — 2026-09-06
 
