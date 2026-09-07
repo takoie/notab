@@ -2,6 +2,19 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## Ikke utgitt
+
+- Autolagring: halvskrevne notater i komposit­øren og inline-redigering
+  lagres lokalt og hentes tilbake etter navigering eller omstart.
+- Slettebekreftelse på notater.
+- Notatfarge: eget fargevalg med fargestripe og bakgrunnstone på kortet.
+- Editor: emoji-velger og LaTeX-innsetting (KaTeX-rendring i notatvisning).
+- Korrekturspråk kan settes til «Av» for å slå av stavekontroll helt.
+- Festede popup-vinduer har minimer / maksimer / lukk og taskbar-knapp.
+- Notatrader bruker full bredde.
+- Kalenderhendelser: frittstående hendelser over flere dager, valgfritt
+  koblet til en fane (synk med de som har fanen).
+
 ## 0.2.0 — 2026-09-06
 
 - Seksjoner/skillere i faner, delt-fane-varsel + forfatternavn, felles pin-vindu, notater med tittel og rik brodtekst, viktighetsmeny, 12 fanefarger, innstillinger med lisens- og endringslogg-sider, PIN-auto-oppl.sing, auto-oppdatering.
