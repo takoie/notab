@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
    * App-wide themed replacement for native `title=""` tooltips. Mount once.
-   * It watches for hovering any element with a `title`, temporarily removes the
-   * attribute (so the OS chip never shows), and renders a styled chip instead.
+   * It watches for hovering any element with a `title`, and once the hover
+   * settles it removes the attribute (so the OS chip never shows) and renders a
+   * styled chip instead. The `title` is restored as soon as the hover ends.
    */
   import { portal } from '$lib/actions/portal';
   import { computePosition } from '$lib/popover';
@@ -14,7 +15,7 @@
   let pos = $state({ left: 0, top: -9999, origin: 'left top' });
   let el = $state<HTMLDivElement | null>(null);
 
-  let currentTarget: HTMLElement | null = null;
+  let target: HTMLElement | null = null;
   let stashed: string | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -28,19 +29,20 @@
     return null;
   }
 
-  function hide() {
+  function reset() {
     clearTimeout(timer);
     visible = false;
-    if (currentTarget && stashed != null && !currentTarget.hasAttribute('title')) {
-      currentTarget.setAttribute('title', stashed);
+    // put the attribute back the moment we're done with it
+    if (target && stashed != null && !target.hasAttribute('title')) {
+      target.setAttribute('title', stashed);
     }
-    currentTarget = null;
+    target = null;
     stashed = null;
   }
 
   function place() {
-    if (!el || !currentTarget) return;
-    const a = currentTarget.getBoundingClientRect();
+    if (!el || !target) return;
+    const a = target.getBoundingClientRect();
     pos = computePosition(
       { x: a.x, y: a.y, width: a.width, height: a.height },
       { width: el.offsetWidth, height: el.offsetHeight },
@@ -51,16 +53,23 @@
 
   function onOver(e: PointerEvent) {
     if (e.pointerType === 'touch') return;
-    const t = titledAncestor(e.target);
-    if (t === currentTarget) return;
-    hide();
-    if (!t) return;
-    currentTarget = t;
-    stashed = t.getAttribute('title');
-    text = stashed ?? '';
-    t.removeAttribute('title');
+
+    // still somewhere inside the element we're already tracking — keep it
+    if (target && target.contains(e.target as Node)) return;
+
+    const next = titledAncestor(e.target);
+    if (next === target) return;
+
+    reset();
+    if (!next) return;
+
+    target = next;
     timer = setTimeout(() => {
-      if (!currentTarget) return;
+      if (!target) return;
+      stashed = target.getAttribute('title');
+      text = (stashed ?? '').trim();
+      if (!text) return;
+      target.removeAttribute('title');
       visible = true;
       pos = { left: 0, top: -9999, origin: 'left top' };
       queueMicrotask(place);
@@ -70,10 +79,11 @@
 
 <svelte:window
   onpointerover={onOver}
-  onpointerdown={hide}
-  onwheel={hide}
-  onblur={hide}
-  onkeydown={(e) => e.key === 'Escape' && hide()}
+  onpointerdown={reset}
+  onwheel={reset}
+  onblur={reset}
+  onmouseleave={reset}
+  onkeydown={(e) => e.key === 'Escape' && reset()}
 />
 
 {#if visible && text}
