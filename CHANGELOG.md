@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## 0.4.1 — 2026-09-07
+
+- Kalenderhendelser kobles nå til gjeldende fane som standard, så de synkroniseres og sikkerhetskopieres; «ikke koble til fane» er nå et eget avkrysningsvalg og ikke en oppføring i fane-lista. Synk er gjort mer robust: én avvist operasjon blokkerer ikke lenger resten av synk-køen.
+
 ## 0.4.0 — 2026-09-07
 
 - Lys modus som standard ved ny installasjon; innstillinger (tema/språk/visning) speiles til Tauri-lageret så de overlever oppdatering. Egne tema-tilpassede tooltips i stedet for OS-boksene. Kalender: høyreklikk en dag for å opprette hendelse eller notat, scroll for å bla måneder, og notat-tooltip viser «fane – notat». Notat-tittelen er midtstilt på kortet, mer luft mellom header og tekst, ryddigere venstremarg. Oppusset popover- og menydesign. Diskret versjonsnummer i bunnlinja.
