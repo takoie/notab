@@ -7,8 +7,10 @@
 
   let { note, onopen }: { note: Note; onopen: (id: string) => void } = $props();
 
-  const color = $derived(notab.getTab(note.tabId)?.color ?? null);
+  const tab = $derived(notab.getTab(note.tabId));
+  const color = $derived(tab?.color ?? null);
   const label = $derived(note.title || 'Uten tittel');
+  const tip = $derived(tab?.name ? `${tab.name} – ${label}` : label);
 
   const THRESHOLD = 4;
   let capturing = false;
@@ -81,7 +83,7 @@
   onpointerup={onPointerUp}
   onpointercancel={onPointerCancel}
   onclick={onClick}
-  title={label}
+  title={tip}
   class={cn(
     'flex w-full touch-none items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-tight select-none',
     'cursor-grab transition-[filter] hover:brightness-95 active:cursor-grabbing',
