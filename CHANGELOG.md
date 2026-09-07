@@ -8,7 +8,8 @@ Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 - Notater kan slås sammen til tittelen; egen «slå sammen alle»-knapp ved
   sorteringsmenyen. Notatradene bruker mer av plassen til venstre.
 - Matematikk: sett inn formler i et notat med et visuelt mattefelt
-  (MathLive), rendret i notatvisningen. Erstatter det gamle LaTeX-feltet.
+  (MathLive), rendret i notatvisningen. Klikk en formel i editoren for å
+  endre den. Erstatter det gamle LaTeX-feltet.
 - Tekstfarge og uthevingsfarge i notat-editoren.
 - Trykk utenfor et notat under redigering for å lagre og lukke det.
 - Onboarding: første fane får et skikkelig navn via en liten velkomst i

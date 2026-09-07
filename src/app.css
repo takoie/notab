@@ -156,6 +156,15 @@ body {
   display: inline-block;
   vertical-align: middle;
 }
+/* inside the editor a formula is clickable to re-open the math box */
+.rich-editor span[data-latex] {
+  cursor: pointer;
+}
+.rich-editor span[data-latex]:hover {
+  outline: 2px solid rgb(var(--c-accent) / 0.4);
+  outline-offset: 1px;
+  border-radius: 0.2rem;
+}
 .rich-body mark {
   background: rgb(var(--c-warn) / 0.35);
   color: inherit;

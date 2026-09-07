@@ -55,6 +55,8 @@
   let mathOpen = $state(false);
   let mathReady = $state(false);
   let mathFieldEl = $state<HTMLElement | undefined>();
+  /** set when the math box was opened to edit an existing atom */
+  let editingAtom = $state<HTMLElement | null>(null);
 
   const EMOJI = [
     '😀', '😄', '🙂', '😉', '😍', '😎', '🤔', '😅',
@@ -86,14 +88,23 @@
     if (mathOpen && !mathReady) void loadMathlive().then(() => (mathReady = true));
   });
 
+  // when the math box opens, seed the field (empty for a new formula, or the
+  // clicked atom's LaTeX when editing one) and focus it
+  $effect(() => {
+    if (!mathOpen || !mathReady || !mathFieldEl) return;
+    const mf = mathFieldEl as HTMLElement & { value: string; focus?: () => void };
+    mf.value = editingAtom ? (editingAtom.getAttribute('data-latex') ?? '') : '';
+    requestAnimationFrame(() => mf.focus?.());
+  });
+
   function sync() {
     if (!el) return;
-    if (!el.querySelector('span[data-latex][data-rendered]')) {
+    if (!el.querySelector('span[data-latex]')) {
       html = el.innerHTML;
       return;
     }
     // serialise math atoms back to their bare `<span data-latex>` form so the
-    // stored body never carries MathLive's rendered markup
+    // stored body never carries MathLive's rendered markup or editor attributes
     const clone = el.cloneNode(true) as HTMLElement;
     clone.querySelectorAll('span[data-latex]').forEach((s) => {
       s.removeAttribute('data-rendered');
@@ -179,15 +190,30 @@
   function insertMath() {
     const mf = mathFieldEl as (HTMLElement & { value?: string }) | undefined;
     const latex = (mf?.value ?? '').trim();
-    if (!latex) return;
-    const esc = latex
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    insertHtmlAtCaret(`<span data-latex="${esc}">${esc}</span>​`);
+    if (!latex) {
+      mathOpen = false;
+      editingAtom = null;
+      return;
+    }
+
+    if (editingAtom && el?.contains(editingAtom)) {
+      // update the existing atom in place
+      editingAtom.setAttribute('data-latex', latex);
+      editingAtom.removeAttribute('data-rendered');
+      editingAtom.textContent = latex;
+    } else {
+      const esc = latex
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      insertHtmlAtCaret(`<span data-latex="${esc}" contenteditable="false">${esc}</span>​`);
+    }
+
     if (el) void renderMathIn(el);
+    sync();
     if (mf) mf.value = '';
+    editingAtom = null;
     mathOpen = false;
   }
 
@@ -207,7 +233,19 @@
   }
 
   function onClick(e: MouseEvent) {
-    const li = (e.target as HTMLElement).closest('li');
+    const target = e.target as HTMLElement;
+
+    // click a formula -> reopen the math editor on it
+    const atom = target.closest('span[data-latex]') as HTMLElement | null;
+    if (atom && el?.contains(atom)) {
+      e.preventDefault();
+      captureSelection();
+      editingAtom = atom;
+      mathOpen = true;
+      return;
+    }
+
+    const li = target.closest('li');
     if (!li || !li.parentElement?.hasAttribute('data-checklist')) return;
     if (e.offsetX > 22) return;
     li.toggleAttribute('data-checked');
@@ -321,7 +359,10 @@
       class={tbBtn}
       title="Matematikk"
       onpointerdown={captureSelection}
-      onclick={() => (mathOpen = !mathOpen)}
+      onclick={() => {
+        editingAtom = null;
+        mathOpen = !mathOpen;
+      }}
     >
       <Sigma size={15} />
     </button>
@@ -336,7 +377,7 @@
       contenteditable="true"
       spellcheck={settings.spellcheck}
       lang={settings.lang}
-      class="rich-body min-h-[4.5rem] w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+      class="rich-body rich-editor min-h-[4.5rem] w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
       oninput={sync}
       onfocus={() => (focused = true)}
       onblur={() => {
@@ -413,6 +454,7 @@
   placement="bottom-start"
   label="Matematikk"
   class="w-80 space-y-2 p-2.5"
+  onclose={() => (editingAtom = null)}
 >
   {#if mathReady}
     <math-field
@@ -424,6 +466,7 @@
   {/if}
   <p class="text-[11px] text-ink-faint">
     Skriv formelen visuelt (eller LaTeX: <code>\frac</code>, <code>^</code>, <code>_</code> …).
+    {#if editingAtom}Endrer en formel du satte inn tidligere.{/if}
   </p>
   <button
     type="button"
@@ -431,6 +474,6 @@
     disabled={!mathReady}
     onclick={insertMath}
   >
-    Sett inn
+    {editingAtom ? 'Oppdater' : 'Sett inn'}
   </button>
 </Popover>
