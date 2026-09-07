@@ -13,6 +13,7 @@
   import ImageLightbox from '$lib/components/ImageLightbox.svelte';
   import SyncStatus from '$lib/components/SyncStatus.svelte';
   import CalendarView from '$lib/components/calendar/CalendarView.svelte';
+  import OnboardingWizard from '$lib/components/OnboardingWizard.svelte';
 
   import { theme } from '$lib/stores/theme.svelte';
   import { view } from '$lib/stores/view.svelte';
@@ -23,7 +24,7 @@
   import { syncEngine } from '$lib/sync/engine.svelte';
   import { getMeta, setMeta } from '$lib/db/local';
   import { checkForUpdate } from '$lib/updater';
-  import { NotebookPen, LogIn } from '@lucide/svelte';
+  import { LogIn } from '@lucide/svelte';
 
   let ready = $state(false);
   let showAuth = $state(false);
@@ -90,22 +91,7 @@
             <NoteList tab={notab.activeTab} />
           {/key}
         {:else}
-          <div class="grid flex-1 place-items-center p-8 text-center">
-            <div class="space-y-3">
-              <div
-                class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent"
-              >
-                <NotebookPen size={22} />
-              </div>
-              <p class="text-[13px] text-ink-soft">Ingen faner ennå</p>
-              <button
-                class="rounded-xl bg-accent px-4 py-2 text-[13px] font-semibold text-accent-ink"
-                onclick={() => notab.createTab('Å gjøre')}
-              >
-                Lag din første fane
-              </button>
-            </div>
-          </div>
+          <OnboardingWizard />
         {/if}
       </main>
     {/if}

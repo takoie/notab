@@ -41,6 +41,7 @@
   } = $props();
 
   let titleEl = $state<HTMLInputElement | undefined>();
+  let cardEl = $state<HTMLDivElement | undefined>();
   let colorBtn = $state<HTMLButtonElement | undefined>();
   let colorOpen = $state(false);
 
@@ -51,6 +52,28 @@
     }
   });
 
+  // click outside the card (and outside any popover it spawned) -> save & close
+  $effect(() => {
+    let armed = false;
+    const arm = requestAnimationFrame(() => (armed = true));
+
+    function onDown(e: PointerEvent) {
+      if (!armed || !cardEl) return;
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (cardEl.contains(t)) return;
+      if ((t as Element).closest?.('.notab-popover, [role="dialog"]')) return;
+      if (canSave) onsave();
+      else oncancel();
+    }
+
+    window.addEventListener('pointerdown', onDown, true);
+    return () => {
+      cancelAnimationFrame(arm);
+      window.removeEventListener('pointerdown', onDown, true);
+    };
+  });
+
   async function onImages(files: File[]) {
     const { images: next, rejected } = await appendImages(images, files);
     images = next;
@@ -59,6 +82,7 @@
 </script>
 
 <div
+  bind:this={cardEl}
   class="relative overflow-hidden rounded-xl border border-border bg-surface p-2.5 shadow-card"
   style:background-color={color ? tint(color, 6) : undefined}
 >
