@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## 0.5.0 — 2026-09-08
+
+- Kalender: «Nytt notat» lukket seg når du valgte fane — fikset. Høyreklikk-menyen i en kalenderdag åpner nå ved musepekeren i stedet for nederst i cella.
+
 ## 0.4.2 — 2026-09-07
 
 - Kalenderhendelser uten fane synkroniseres nå til profilen din (Convex) i stedet for å bli liggende bare lokalt. Velg «Ingen fane» i hendelsesdialogen for privat synk, eller en fane for å dele med andre. Krever «npx convex deploy» av backend for å tre i kraft.

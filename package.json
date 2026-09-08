@@ -1,7 +1,7 @@
 {
   "name": "notab",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n convex,app -c blue,magenta \"npx convex dev\" \"npm run tauri dev\"",
