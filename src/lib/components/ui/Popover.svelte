@@ -54,7 +54,13 @@
 
   function onPointerdown(e: Event) {
     const t = e.target as Node;
-    if (panelEl && !panelEl.contains(t) && anchor && !anchor.contains(t)) close();
+    if (panelEl && panelEl.contains(t)) return;
+    if (anchor && anchor.contains(t)) return;
+    // A popover opened from inside this panel (e.g. a Select dropdown) is
+    // portaled to <body> as a sibling, not a DOM descendant, so contains()
+    // misses it. Any click that lands inside some popover layer is "inside".
+    if (t instanceof Element && t.closest('.notab-popover')) return;
+    close();
   }
 
   $effect(() => {

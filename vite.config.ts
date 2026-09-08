@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { fileURLToPath, URL } from 'node:url';
 import { createRequire } from 'node:module';
 
@@ -9,7 +10,7 @@ const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const pkg = createRequire(import.meta.url)('./package.json') as { version: string };
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [svelte(), svelteTesting()],
   resolve: { alias: { $lib: r('./src/lib') } },
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
 
