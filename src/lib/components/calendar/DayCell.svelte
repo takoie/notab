@@ -39,20 +39,25 @@
 
   let addBtn = $state<HTMLButtonElement>();
   let moreBtn = $state<HTMLButtonElement>();
-  let cellEl = $state<HTMLDivElement>();
   let quickOpen = $state(false);
   let moreOpen = $state(false);
   let ctxOpen = $state(false);
 
+  // the context menu sprouts from the mouse pointer, not the whole cell
+  let ctxPt = $state({ x: 0, y: 0 });
+  const ctxAnchor = {
+    getBoundingClientRect: () => ({ x: ctxPt.x, y: ctxPt.y, width: 0, height: 0 }),
+  };
+
   function onContext(e: MouseEvent) {
     e.preventDefault();
+    ctxPt = { x: e.clientX, y: e.clientY };
     ctxOpen = true;
   }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  bind:this={cellEl}
   data-day={ts}
   class={cn(
     'group/cell flex min-h-0 flex-col gap-0.5 border-b border-r border-border/60 p-1',
@@ -126,7 +131,7 @@
 <QuickCreatePopover anchor={addBtn} bind:open={quickOpen} {ts} />
 
 <Popover
-  anchor={cellEl}
+  anchor={ctxAnchor}
   bind:open={ctxOpen}
   placement="bottom-start"
   label="Ny på denne dagen"

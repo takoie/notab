@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import Fixture from './PopoverPair.fixture.svelte';
+import VirtualFixture from './PopoverVirtual.fixture.svelte';
 
 /**
  * A Select's dropdown lives inside its own <Popover>, portaled to <body> as a
@@ -31,5 +32,16 @@ describe('Popover — nested / layered popovers', () => {
     await tick();
 
     expect(screen.getByTestId('a-state').textContent).toBe('closed');
+  });
+
+  it('positions the panel at a virtual anchor (mouse pointer)', async () => {
+    render(VirtualFixture, { props: { x: 200, y: 300 } });
+    await tick();
+    await tick();
+
+    const panel = screen.getByTestId('in-panel').closest('.notab-popover') as HTMLElement;
+    // bottom-start off a zero-size point: left = x, top = y + 6px offset
+    expect(panel.style.left).toBe('200px');
+    expect(panel.style.top).toBe('306px');
   });
 });

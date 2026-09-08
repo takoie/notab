@@ -5,6 +5,10 @@
   import { computePosition, type Placement } from '$lib/popover';
   import { cn } from '$lib/cn';
 
+  type VirtualAnchor = {
+    getBoundingClientRect: () => { x: number; y: number; width: number; height: number };
+  };
+
   let {
     anchor,
     open = $bindable(false),
@@ -14,8 +18,12 @@
     onclose,
     children,
   }: {
-    /** element the panel sprouts from */
-    anchor: HTMLElement | undefined | null;
+    /**
+     * What the panel sprouts from: a real element, or a virtual anchor — any
+     * object with `getBoundingClientRect` (e.g. a zero-size rect at the mouse
+     * pointer for a context menu).
+     */
+    anchor: HTMLElement | VirtualAnchor | undefined | null;
     open?: boolean;
     placement?: Placement;
     class?: string;
@@ -55,7 +63,7 @@
   function onPointerdown(e: Event) {
     const t = e.target as Node;
     if (panelEl && panelEl.contains(t)) return;
-    if (anchor && anchor.contains(t)) return;
+    if (anchor instanceof HTMLElement && anchor.contains(t)) return;
     // A popover opened from inside this panel (e.g. a Select dropdown) is
     // portaled to <body> as a sibling, not a DOM descendant, so contains()
     // misses it. Any click that lands inside some popover layer is "inside".
