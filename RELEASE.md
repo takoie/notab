@@ -12,9 +12,17 @@ Har `convex/schema.ts` eller `convex/*.ts` endret seg siden forrige deploy
 (nye tabeller, nye felt, ny op-type), **må** du deploye før releasen — ellers
 avviser serveren de nye synk-operasjonene og brukere mister data:
 ```powershell
-npx convex deploy      # prod-deployment (den appen bygges mot)
+npx convex dev --once   # pusher convex/ til deploymentet appen bruker
 ```
 `npm run release` gjør IKKE dette.
+
+> ⚠️ **Hvilket deployment?** Appen bygges mot URL-en i `VITE_CONVEX_URL`
+> (`.env.local`) — i dag `giddy-penguin-395` (merket `dev:` i
+> `CONVEX_DEPLOYMENT`, men det er her all faktisk brukerdata ligger).
+> `npx convex deploy` uten nøkkel treffer et **annet**, ubrukt
+> «prod»-deployment (`helpful-avocet-831`) og har ingen effekt for brukerne.
+> Bruk `npx convex dev --once` (eller sett en deploy-nøkkel for
+> `giddy-penguin-395`).
 
 ### 1. Bestem versjonsnummer
 Semver `x.y.z`, f.eks. `0.2.0`. Du trenger **ikke** redigere filer manuelt —
