@@ -1,22 +1,12 @@
 <script lang="ts">
-  import {
-    Minus,
-    Square,
-    X,
-    Lock,
-    Moon,
-    Sun,
-    Settings,
-    NotebookPen,
-    CalendarDays,
-  } from '@lucide/svelte';
-  import { windowControls } from '$lib/tauri';
+  import { Lock, Moon, Sun, Settings, NotebookPen, CalendarDays } from '@lucide/svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
   import { view } from '$lib/stores/view.svelte';
   import { cn } from '$lib/cn';
   import Logo from './Logo.svelte';
+  import WindowControls from './WindowControls.svelte';
 
   let { onOpenSettings }: { onOpenSettings: () => void } = $props();
 
@@ -27,18 +17,6 @@
       onOpenSettings();
       toasts.push('Sett en PIN-kode i innstillinger for å låse NotaB!');
     }
-  }
-
-  const ctl = windowControls();
-
-  async function min() {
-    (await ctl).minimize();
-  }
-  async function max() {
-    (await ctl).toggleMaximize();
-  }
-  async function close() {
-    (await ctl).close();
   }
 </script>
 
@@ -114,25 +92,5 @@
 
   <div class="mx-1 h-5 w-px bg-border"></div>
 
-  <button
-    class="no-drag grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
-    onclick={min}
-    title="Minimer"
-  >
-    <Minus size={15} />
-  </button>
-  <button
-    class="no-drag grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-surface-sunken hover:text-ink"
-    onclick={max}
-    title="Maksimer"
-  >
-    <Square size={13} />
-  </button>
-  <button
-    class="no-drag grid h-8 w-8 place-items-center rounded-lg text-ink-soft hover:bg-danger hover:text-white"
-    onclick={close}
-    title="Lukk"
-  >
-    <X size={16} />
-  </button>
+  <WindowControls />
 </header>

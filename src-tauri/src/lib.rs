@@ -98,11 +98,14 @@ pub fn run() {
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_store::Builder::new().build());
 
-  // The updater plugin is desktop-only; it reads its endpoints + pubkey from the
-  // `plugins.updater` block in tauri.conf.json.
+  // The updater and window-state plugins are desktop-only. window-state
+  // remembers each window's size/position across restarts; updater reads its
+  // endpoints + pubkey from the `plugins.updater` block in tauri.conf.json.
   #[cfg(not(any(target_os = "android", target_os = "ios")))]
   {
-    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    builder = builder
+      .plugin(tauri_plugin_updater::Builder::new().build())
+      .plugin(tauri_plugin_window_state::Builder::default().build());
   }
 
   builder

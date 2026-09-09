@@ -2,6 +2,7 @@
   import { Lock } from '@lucide/svelte';
   import { lock } from '$lib/stores/lock.svelte';
   import { focusOnMount } from '$lib/actions/focus';
+  import WindowControls from './WindowControls.svelte';
 
   let pin = $state('');
   let error = $state(false);
@@ -46,6 +47,11 @@
 <div
   class="fixed inset-0 z-[80] grid place-items-center bg-canvas/80 backdrop-blur-xl transition-opacity duration-500"
 >
+  <!-- keep the window draggable and the min/max/close buttons usable while locked -->
+  <div class="drag-region absolute inset-x-0 top-0 flex h-11 items-center justify-end px-2">
+    <WindowControls />
+  </div>
+
   <div class="flex w-full max-w-xs flex-col items-center gap-5 p-6 text-center">
     <div class="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
       <Lock size={22} />
