@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i NotaB! samles her. Nyeste øverst.
 
+## 0.6.0 — 2026-09-09
+
+- Delte kalendere: del en kode for en fargekodet hendelsessamling som legger seg på kalenderen (eier velger om andre kan redigere eller bare se). Vindusstørrelse og -posisjon huskes mellom økter. Minimer/maksimer/lukk vises når appen er PIN-låst. Avkryssingsbokser i sjekklister klippes ikke lenger.
+
 ## 0.5.0 — 2026-09-08
 
 - Kalender: «Nytt notat» lukket seg når du valgte fane — fikset. Høyreklikk-menyen i en kalenderdag åpner nå ved musepekeren i stedet for nederst i cella.
