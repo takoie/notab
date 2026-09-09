@@ -1,10 +1,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Tab, Note, CalendarEvent, OutboxOp, MetaRow } from '../types';
+import type { Tab, Note, CalendarEvent, SharedCalendar, OutboxOp, MetaRow } from '../types';
 
 interface NotabDB extends DBSchema {
   tabs: { key: string; value: Tab };
   notes: { key: string; value: Note; indexes: { by_tab: string } };
-  events: { key: string; value: CalendarEvent; indexes: { by_tab: string } };
+  events: { key: string; value: CalendarEvent; indexes: { by_tab: string; by_cal: string } };
+  calendars: { key: string; value: SharedCalendar };
   outbox: { key: number; value: OutboxOp; indexes: { by_next: number } };
   meta: { key: string; value: MetaRow };
 }
@@ -13,8 +14,8 @@ let dbp: Promise<IDBPDatabase<NotabDB>> | null = null;
 
 export function db(): Promise<IDBPDatabase<NotabDB>> {
   if (!dbp) {
-    dbp = openDB<NotabDB>('notab', 2, {
-      upgrade(database, oldVersion) {
+    dbp = openDB<NotabDB>('notab', 3, {
+      upgrade(database, oldVersion, _newVersion, tx) {
         if (oldVersion < 1) {
           database.createObjectStore('tabs', { keyPath: 'id' });
           const notes = database.createObjectStore('notes', { keyPath: 'id' });
@@ -29,6 +30,10 @@ export function db(): Promise<IDBPDatabase<NotabDB>> {
         if (oldVersion < 2) {
           const events = database.createObjectStore('events', { keyPath: 'id' });
           events.createIndex('by_tab', 'tabId');
+        }
+        if (oldVersion < 3) {
+          database.createObjectStore('calendars', { keyPath: 'id' });
+          tx.objectStore('events').createIndex('by_cal', 'calId');
         }
       },
     });
@@ -116,6 +121,44 @@ export async function putEvents(evs: CalendarEvent[]): Promise<void> {
   await Promise.all([...evs.map((e) => tx.store.put(e)), tx.done]);
 }
 
+export async function getEventsForCalendar(calId: string): Promise<CalendarEvent[]> {
+  return (await db()).getAllFromIndex('events', 'by_cal', calId);
+}
+
+/* ---------- shared calendars ---------- */
+
+export async function getAllCalendars(): Promise<SharedCalendar[]> {
+  return (await db()).getAll('calendars');
+}
+
+export async function getCalendar(id: string): Promise<SharedCalendar | undefined> {
+  return (await db()).get('calendars', id);
+}
+
+export async function putCalendar(cal: SharedCalendar): Promise<void> {
+  await (await db()).put('calendars', cal);
+}
+
+export async function putCalendars(cals: SharedCalendar[]): Promise<void> {
+  if (cals.length === 0) return;
+  const tx = (await db()).transaction('calendars', 'readwrite');
+  await Promise.all([...cals.map((c) => tx.store.put(c)), tx.done]);
+}
+
+/** Drop a calendar and every local event that belonged to it (used on leave/delete). */
+export async function hardDeleteCalendarCascade(calId: string): Promise<void> {
+  const database = await db();
+  const tx = database.transaction(['calendars', 'events'], 'readwrite');
+  await tx.objectStore('calendars').delete(calId);
+  const idx = tx.objectStore('events').index('by_cal');
+  let cursor = await idx.openCursor(calId);
+  while (cursor) {
+    await cursor.delete();
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+}
+
 /* ---------- outbox ---------- */
 
 export async function enqueueOp(op: OutboxOp): Promise<void> {
@@ -160,6 +203,7 @@ export async function _resetForTests(): Promise<void> {
     database.clear('tabs'),
     database.clear('notes'),
     database.clear('events'),
+    database.clear('calendars'),
     database.clear('outbox'),
     database.clear('meta'),
   ]);

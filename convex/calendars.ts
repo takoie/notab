@@ -3,43 +3,43 @@ import { v } from 'convex/values';
 import { requireSession } from './security';
 import { genCode, normalizeCode } from './shareCode';
 
-async function ownedTab(ctx: any, userId: string, tabCid: string) {
-  const tab = await ctx.db
-    .query('tabs')
-    .withIndex('by_cid', (q: any) => q.eq('cid', tabCid))
+async function ownedCalendar(ctx: any, userId: string, calCid: string) {
+  const cal = await ctx.db
+    .query('calendars')
+    .withIndex('by_cid', (q: any) => q.eq('cid', calCid))
     .unique();
-  if (!tab) throw new Error('Synk fanen først (den finnes ikke på serveren ennå).');
-  if (tab.ownerId !== userId) throw new Error('Bare eieren kan dele denne fanen.');
-  return tab;
+  if (!cal) throw new Error('Synk kalenderen først (den finnes ikke på serveren ennå).');
+  if (cal.ownerId !== userId) throw new Error('Bare eieren kan dele denne kalenderen.');
+  return cal;
 }
 
 export const createShareCode = mutation({
-  args: { token: v.string(), tabCid: v.string() },
+  args: { token: v.string(), calCid: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
-    const tab = await ownedTab(ctx, userId, args.tabCid);
-    if (tab.shareCode) return { code: tab.shareCode };
+    const cal = await ownedCalendar(ctx, userId, args.calCid);
+    if (cal.shareCode) return { code: cal.shareCode };
 
     let code = genCode();
     for (let i = 0; i < 5; i++) {
       const clash = await ctx.db
-        .query('tabs')
+        .query('calendars')
         .withIndex('by_shareCode', (q) => q.eq('shareCode', code))
         .unique();
       if (!clash) break;
       code = genCode();
     }
-    await ctx.db.patch(tab._id, { shareCode: code, updatedAt: Date.now() });
+    await ctx.db.patch(cal._id, { shareCode: code, updatedAt: Date.now() });
     return { code };
   },
 });
 
 export const revokeShareCode = mutation({
-  args: { token: v.string(), tabCid: v.string() },
+  args: { token: v.string(), calCid: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
-    const tab = await ownedTab(ctx, userId, args.tabCid);
-    await ctx.db.patch(tab._id, { shareCode: null, updatedAt: Date.now() });
+    const cal = await ownedCalendar(ctx, userId, args.calCid);
+    await ctx.db.patch(cal._id, { shareCode: null, updatedAt: Date.now() });
     return null;
   },
 });
@@ -49,40 +49,40 @@ export const joinByCode = mutation({
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
     const code = normalizeCode(args.code);
-    const tab = await ctx.db
-      .query('tabs')
+    const cal = await ctx.db
+      .query('calendars')
       .withIndex('by_shareCode', (q) => q.eq('shareCode', code))
       .unique();
-    if (!tab) throw new Error('Ugyldig kode.');
-    if (tab.ownerId === userId) return { tabCid: tab.cid, name: tab.name };
+    if (!cal) throw new Error('Ugyldig kode.');
+    if (cal.ownerId === userId) return { calCid: cal.cid, name: cal.name };
 
     const existing = await ctx.db
-      .query('tabMembers')
-      .withIndex('by_tab_user', (q) => q.eq('tabCid', tab.cid).eq('userId', userId))
+      .query('calendarMembers')
+      .withIndex('by_cal_user', (q) => q.eq('calCid', cal.cid).eq('userId', userId))
       .unique();
     if (!existing) {
-      await ctx.db.insert('tabMembers', {
-        tabCid: tab.cid,
+      await ctx.db.insert('calendarMembers', {
+        calCid: cal.cid,
         userId,
         joinedAt: Date.now(),
       });
     }
-    return { tabCid: tab.cid, name: tab.name };
+    return { calCid: cal.cid, name: cal.name };
   },
 });
 
 export const members = query({
-  args: { token: v.string(), tabCid: v.string() },
+  args: { token: v.string(), calCid: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
-    const tab = await ctx.db
-      .query('tabs')
-      .withIndex('by_cid', (q) => q.eq('cid', args.tabCid))
+    const cal = await ctx.db
+      .query('calendars')
+      .withIndex('by_cid', (q) => q.eq('cid', args.calCid))
       .unique();
-    if (!tab || tab.ownerId !== userId) return [];
+    if (!cal || cal.ownerId !== userId) return [];
     const rows = await ctx.db
-      .query('tabMembers')
-      .withIndex('by_tab', (q) => q.eq('tabCid', args.tabCid))
+      .query('calendarMembers')
+      .withIndex('by_cal', (q) => q.eq('calCid', args.calCid))
       .collect();
     const out = [];
     for (const r of rows) {
@@ -94,26 +94,26 @@ export const members = query({
 });
 
 export const removeMember = mutation({
-  args: { token: v.string(), tabCid: v.string(), userId: v.id('users') },
+  args: { token: v.string(), calCid: v.string(), userId: v.id('users') },
   handler: async (ctx, args) => {
     const me = await requireSession(ctx, args.token);
-    const tab = await ownedTab(ctx, me, args.tabCid);
+    const cal = await ownedCalendar(ctx, me, args.calCid);
     const row = await ctx.db
-      .query('tabMembers')
-      .withIndex('by_tab_user', (q) => q.eq('tabCid', tab.cid).eq('userId', args.userId))
+      .query('calendarMembers')
+      .withIndex('by_cal_user', (q) => q.eq('calCid', cal.cid).eq('userId', args.userId))
       .unique();
     if (row) await ctx.db.delete(row._id);
     return null;
   },
 });
 
-export const leaveTab = mutation({
-  args: { token: v.string(), tabCid: v.string() },
+export const leaveCalendar = mutation({
+  args: { token: v.string(), calCid: v.string() },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
     const row = await ctx.db
-      .query('tabMembers')
-      .withIndex('by_tab_user', (q) => q.eq('tabCid', args.tabCid).eq('userId', userId))
+      .query('calendarMembers')
+      .withIndex('by_cal_user', (q) => q.eq('calCid', args.calCid).eq('userId', userId))
       .unique();
     if (row) await ctx.db.delete(row._id);
     return null;

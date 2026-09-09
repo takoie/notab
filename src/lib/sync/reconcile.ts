@@ -1,4 +1,4 @@
-import type { CalendarEvent, Note, Tab } from '../types';
+import type { CalendarEvent, Note, SharedCalendar, Tab } from '../types';
 
 export interface Versioned {
   id: string;
@@ -87,6 +87,8 @@ export interface WireEvent {
   kind: 'event';
   id: string;
   tabId: string;
+  /** set when the event belongs to a shared calendar (mutually exclusive with tabId) */
+  calId?: string;
   title: string;
   startDate: number;
   endDate: number;
@@ -95,7 +97,17 @@ export interface WireEvent {
   clientUpdatedAt: number;
 }
 
-export type WireOp = WireTab | WireNote | WireEvent;
+export interface WireCalendar {
+  kind: 'calendar';
+  id: string;
+  name: string;
+  color: string | null;
+  allowMemberEdit: boolean;
+  deleted: boolean;
+  clientUpdatedAt: number;
+}
+
+export type WireOp = WireTab | WireNote | WireEvent | WireCalendar;
 
 /** Strip client-only bookkeeping before sending a row to the server. */
 export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
@@ -114,13 +126,25 @@ export function tabToWire(t: Tab): Omit<WireTab, 'kind'> {
 export function eventToWire(e: CalendarEvent): Omit<WireEvent, 'kind'> {
   return {
     id: e.id,
-    tabId: e.tabId ?? '',
+    tabId: e.calId ? '' : e.tabId ?? '',
+    calId: e.calId ?? undefined,
     title: e.title,
     startDate: e.startDate,
     endDate: e.endDate,
     color: e.color,
     deleted: e.deleted,
     clientUpdatedAt: e.updatedAt,
+  };
+}
+
+export function calendarToWire(c: SharedCalendar): Omit<WireCalendar, 'kind'> {
+  return {
+    id: c.id,
+    name: c.name,
+    color: c.color,
+    allowMemberEdit: c.allowMemberEdit,
+    deleted: c.deleted,
+    clientUpdatedAt: c.updatedAt,
   };
 }
 

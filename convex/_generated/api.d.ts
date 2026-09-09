@@ -9,7 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as calendars from "../calendars.js";
 import type * as security from "../security.js";
+import type * as shareCode from "../shareCode.js";
 import type * as sync from "../sync.js";
 import type * as tabs from "../tabs.js";
 
@@ -21,7 +23,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  calendars: typeof calendars;
   security: typeof security;
+  shareCode: typeof shareCode;
   sync: typeof sync;
   tabs: typeof tabs;
 }>;

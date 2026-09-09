@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Trash2 } from '@lucide/svelte';
+  import { Trash2, Lock } from '@lucide/svelte';
   import { notab } from '$lib/stores/notab.svelte';
   import { toasts } from '$lib/stores/toasts.svelte';
   import { startOfToday, toDateInput, fromDateInput } from '$lib/date';
@@ -19,18 +19,37 @@
   let title = $state('');
   let startTs = $state<number>(startOfToday());
   let endTs = $state<number>(startOfToday());
-  // '' = personal (not tied to a fane, still synced); otherwise a tab id
-  let tabId = $state<string>('');
+  // '' = personal · 'tab:<id>' = fane · 'cal:<id>' = delt kalender
+  let where = $state<string>('');
   let color = $state<string | null>(null);
   let busy = $state(false);
+  // the loaded event belongs to a shared calendar this user may not edit
+  let readOnly = $state(false);
 
   let delBtn = $state<HTMLButtonElement | undefined>();
   let confirmOpen = $state(false);
 
-  const tabOptions = $derived([
-    { value: '', label: 'Ingen fane (synkes til deg)' },
-    ...notab.visibleTabs.map((t) => ({ value: t.id, label: t.name })),
+  const whereOptions = $derived([
+    { value: '', label: 'Ingen (personlig)' },
+    ...notab.visibleCalendars
+      .filter((c) => notab.canEditCalendar(c.id))
+      .map((c) => ({ value: `cal:${c.id}`, label: `Kalender: ${c.name}` })),
+    ...notab.visibleTabs.map((t) => ({ value: `tab:${t.id}`, label: `Fane: ${t.name}` })),
   ]);
+
+  const target = $derived.by(() => {
+    if (where.startsWith('cal:')) return { tabId: null as string | null, calId: where.slice(4) };
+    if (where.startsWith('tab:')) return { tabId: where.slice(4), calId: null as string | null };
+    return { tabId: null as string | null, calId: null as string | null };
+  });
+
+  const whereHint = $derived(
+    where.startsWith('cal:')
+      ? 'Deles med alle som har koden til denne kalenderen.'
+      : where.startsWith('tab:')
+        ? 'Deles med alle som har fanen.'
+        : 'Synkroniseres til profilen din (ikke delt med andre).',
+  );
 
   // (re)load fields whenever the dialog opens
   $effect(() => {
@@ -39,32 +58,25 @@
     title = ev?.title ?? '';
     startTs = ev?.startDate ?? defaultDate ?? startOfToday();
     endTs = ev?.endDate ?? defaultDate ?? startOfToday();
-    // default: not tied to a fane (still synced to the user's profile)
-    tabId = ev ? (ev.tabId ?? '') : '';
+    where = ev?.calId ? `cal:${ev.calId}` : ev?.tabId ? `tab:${ev.tabId}` : '';
     color = ev?.color ?? null;
+    readOnly = !!ev?.calId && !notab.canEditCalendar(ev.calId);
   });
 
   async function save() {
-    if (busy || !title.trim()) return;
+    if (busy || readOnly || !title.trim()) return;
     busy = true;
     try {
-      if (eventId) {
-        await notab.updateEvent(eventId, {
-          title: title.trim(),
-          startDate: startTs,
-          endDate: endTs,
-          tabId: tabId || null,
-          color,
-        });
-      } else {
-        await notab.addEvent({
-          title: title.trim(),
-          startDate: startTs,
-          endDate: endTs,
-          tabId: tabId || null,
-          color,
-        });
-      }
+      const fields = {
+        title: title.trim(),
+        startDate: startTs,
+        endDate: endTs,
+        tabId: target.tabId,
+        calId: target.calId,
+        color,
+      };
+      if (eventId) await notab.updateEvent(eventId, fields);
+      else await notab.addEvent(fields);
       open = false;
     } catch (e) {
       toasts.error(e instanceof Error ? e.message : 'Kunne ikke lagre hendelsen');
@@ -74,7 +86,7 @@
   }
 
   async function remove() {
-    if (!eventId) return;
+    if (!eventId || readOnly) return;
     await notab.deleteEvent(eventId);
     open = false;
   }
@@ -82,9 +94,19 @@
 
 <Modal title={editing ? 'Rediger hendelse' : 'Ny hendelse'} bind:open>
   <div class="space-y-3">
+    {#if readOnly}
+      <div
+        class="flex items-center gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-[12px] text-ink-soft"
+      >
+        <Lock size={13} class="shrink-0" />
+        Denne hendelsen tilhører en skrivebeskyttet delt kalender.
+      </div>
+    {/if}
+
     <input
-      class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[14px] font-medium text-ink outline-none focus:border-accent"
+      class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[14px] font-medium text-ink outline-none focus:border-accent disabled:opacity-60"
       placeholder="Tittel"
+      disabled={readOnly}
       bind:value={title}
       onkeydown={(e) => {
         if (e.key === 'Enter') save();
@@ -96,7 +118,8 @@
         Fra
         <input
           type="date"
-          class="mt-1 w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent [color-scheme:light] dark:[color-scheme:dark]"
+          class="mt-1 w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60 [color-scheme:light] dark:[color-scheme:dark]"
+          disabled={readOnly}
           value={toDateInput(startTs)}
           onchange={(e) => {
             const v = fromDateInput(e.currentTarget.value);
@@ -111,7 +134,8 @@
         Til
         <input
           type="date"
-          class="mt-1 w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent [color-scheme:light] dark:[color-scheme:dark]"
+          class="mt-1 w-full rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-accent disabled:opacity-60 [color-scheme:light] dark:[color-scheme:dark]"
+          disabled={readOnly}
           value={toDateInput(endTs)}
           onchange={(e) => {
             const v = fromDateInput(e.currentTarget.value);
@@ -122,19 +146,16 @@
     </div>
 
     <div class="text-[12px] text-ink-soft">
-      Fane
+      Kalender / fane
       <Select
-        value={tabId}
-        options={tabOptions}
-        label="Fane"
+        value={where}
+        options={whereOptions}
+        label="Kalender / fane"
+        disabled={readOnly}
         class="mt-1 w-full"
-        onChange={(v) => (tabId = v)}
+        onChange={(v) => (where = v)}
       />
-      <p class="mt-1 text-[11px] text-ink-faint">
-        {tabId
-          ? 'Deles med alle som har fanen.'
-          : 'Synkroniseres til profilen din (ikke delt med andre).'}
-      </p>
+      <p class="mt-1 text-[11px] text-ink-faint">{whereHint}</p>
     </div>
 
     <div class="flex flex-wrap items-center gap-1.5">
@@ -142,7 +163,8 @@
       {#each PALETTE as c (c ?? 'none')}
         <button
           type="button"
-          class="grid h-5 w-5 place-items-center rounded-full border border-border transition-transform hover:scale-110"
+          disabled={readOnly}
+          class="grid h-5 w-5 place-items-center rounded-full border border-border transition-transform hover:scale-110 disabled:opacity-50 disabled:hover:scale-100"
           class:ring-2={color === c}
           class:ring-accent={color === c}
           class:ring-offset-1={color === c}
@@ -158,7 +180,7 @@
   </div>
 
   {#snippet footer()}
-    {#if editing}
+    {#if editing && !readOnly}
       <button
         bind:this={delBtn}
         type="button"
@@ -173,16 +195,18 @@
       class="rounded-lg border border-border px-3 py-1.5 text-[13px] font-medium text-ink-soft hover:bg-surface-sunken"
       onclick={() => (open = false)}
     >
-      Avbryt
+      {readOnly ? 'Lukk' : 'Avbryt'}
     </button>
-    <button
-      type="button"
-      class="rounded-lg bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-ink disabled:opacity-40"
-      disabled={busy || !title.trim()}
-      onclick={save}
-    >
-      {editing ? 'Lagre' : 'Legg til'}
-    </button>
+    {#if !readOnly}
+      <button
+        type="button"
+        class="rounded-lg bg-accent px-4 py-1.5 text-[13px] font-semibold text-accent-ink disabled:opacity-40"
+        disabled={busy || !title.trim()}
+        onclick={save}
+      >
+        {editing ? 'Lagre' : 'Legg til'}
+      </button>
+    {/if}
   {/snippet}
 </Modal>
 

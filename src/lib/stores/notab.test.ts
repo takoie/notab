@@ -233,6 +233,50 @@ describe('NotabStore — local core', () => {
     expect(notab.getEvent(ev!.id)?.deleted).toBe(true);
   });
 
+  it('creates a shared calendar and queues an upsertCalendar op', async () => {
+    const cal = await notab.createCalendar('Prøveplan');
+    expect(notab.visibleCalendars.map((c) => c.name)).toContain('Prøveplan');
+    expect(cal.allowMemberEdit).toBe(true);
+    expect(cal.joined).toBe(false);
+    const ops = (await allOps()).filter((o) => o.type === 'upsertCalendar');
+    expect(ops).toHaveLength(1);
+    expect(ops[0].entityId).toBe(cal.id);
+  });
+
+  it('a calendar event carries calId and clears tabId; is hidden when the calendar is', async () => {
+    const cal = await notab.createCalendar('Felles');
+    const d0 = Date.UTC(2026, 2, 2);
+    const d2 = Date.UTC(2026, 2, 4);
+    const mid = Date.UTC(2026, 2, 3);
+    const ev = await notab.addEvent({
+      title: 'Møte',
+      startDate: d0,
+      endDate: d2,
+      tabId: null,
+      calId: cal.id,
+    });
+    expect(ev!.calId).toBe(cal.id);
+    expect(ev!.tabId).toBeNull();
+    const evOp = (await allOps()).filter((o) => o.type === 'upsertEvent').at(-1)!;
+    expect(evOp.tabId).toBe(cal.id);
+    expect((evOp.payload as { calId?: string }).calId).toBe(cal.id);
+
+    expect(notab.eventsInRange(mid, mid).map((e) => e.title)).toContain('Møte');
+    notab.toggleCalendarHidden(cal.id);
+    expect(notab.eventsInRange(mid, mid).map((e) => e.title)).not.toContain('Møte');
+  });
+
+  it('canEditCalendar: true for own calendars, false for joined read-only', async () => {
+    const own = await notab.createCalendar('Min');
+    expect(notab.canEditCalendar(own.id)).toBe(true);
+    expect(notab.canEditCalendar(null)).toBe(true);
+    // simulate a joined, read-only calendar landing from a pull
+    const joined = { ...own, id: 'joined-1', joined: true, allowMemberEdit: false };
+    await import('../db/local').then((l) => l.putCalendar(joined));
+    await notab.reload();
+    expect(notab.canEditCalendar('joined-1')).toBe(false);
+  });
+
   it('collapses a single note and toggles all notes in a tab', async () => {
     const tab = await notab.createTab('X');
     const a = await notab.addNote(tab.id, 'A');

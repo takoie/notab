@@ -107,6 +107,35 @@ export async function requireTabAccess(
   return { isOwner: true };
 }
 
+/**
+ * Access to a shared calendar. Owner: full. Member: read always; write only
+ * when the calendar allows member edits. Unknown calendar: the first pusher
+ * becomes owner (mirrors requireTabAccess).
+ */
+export async function requireCalendarAccess(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<'users'>,
+  calCid: string,
+  opts: { write?: boolean } = {},
+): Promise<{ isOwner: boolean }> {
+  const cal = await ctx.db
+    .query('calendars')
+    .withIndex('by_cid', (q) => q.eq('cid', calCid))
+    .unique();
+  if (!cal) return { isOwner: true };
+  if (cal.ownerId === userId) return { isOwner: true };
+
+  const member = await ctx.db
+    .query('calendarMembers')
+    .withIndex('by_cal_user', (q) => q.eq('calCid', calCid).eq('userId', userId))
+    .unique();
+  if (!member) throw new Error('Ingen tilgang til denne kalenderen.');
+  if (opts.write && !cal.allowMemberEdit) {
+    throw new Error('Denne delte kalenderen er skrivebeskyttet.');
+  }
+  return { isOwner: false };
+}
+
 export function sanitizeUser<T extends Record<string, unknown>>(u: T) {
   const { passwordHash, passwordSalt, usernameLower, ...safe } = u;
   return safe;

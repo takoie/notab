@@ -1,10 +1,18 @@
-import type { CalendarEvent, Importance, Note, OutboxOp, SortMode, Tab } from '../types';
+import type {
+  CalendarEvent,
+  Importance,
+  Note,
+  OutboxOp,
+  SharedCalendar,
+  SortMode,
+  Tab,
+} from '../types';
 import { newId } from '../ids';
 import { orderKeyAfter, orderKeyBefore, orderKeyBetween, sortNotes } from '../order';
 import { firstLine } from '../richtext';
 import { startOfDay } from '../date';
 import * as local from '../db/local';
-import { eventToWire, noteToWire, tabToWire } from '../sync/reconcile';
+import { calendarToWire, eventToWire, noteToWire, tabToWire } from '../sync/reconcile';
 import { emit, emitCrossOnly, on } from '../sync/bus';
 import { session } from './session.svelte';
 
@@ -64,10 +72,28 @@ function freshNote(
   };
 }
 
+function freshCalendar(name: string): SharedCalendar {
+  const t = now();
+  return {
+    id: newId(),
+    name: name.trim() || 'Ny kalender',
+    color: null,
+    ownerId: session.userId,
+    shareCode: null,
+    allowMemberEdit: true,
+    joined: false,
+    createdAt: t,
+    updatedAt: t,
+    deleted: false,
+    syncedAt: 0,
+  };
+}
+
 class NotabStore {
   tabs = $state<Tab[]>([]);
   notes = $state<Note[]>([]);
   events = $state<CalendarEvent[]>([]);
+  calendars = $state<SharedCalendar[]>([]);
   loaded = $state(false);
   activeTabId = $state<string | null>(null);
   /** Set to a tab id right after it is created; the note composer consumes it to autofocus. */
@@ -80,11 +106,14 @@ class NotabStore {
   collapsedSections = $state<Record<string, true>>({});
   /** note id -> true when that note is collapsed to its title (local, persisted) */
   collapsedNotes = $state<Record<string, true>>({});
+  /** shared-calendar id -> true when its events are hidden from the calendar (local, persisted) */
+  hiddenCalendars = $state<Record<string, true>>({});
 
   #byId = new Map<string, Note>();
   #lastSeenLoaded = false;
   #collapsedLoaded = false;
   #collapsedNotesLoaded = false;
+  #hiddenCalendarsLoaded = false;
 
   visibleTabs = $derived(
     this.tabs
@@ -109,6 +138,9 @@ class NotabStore {
     const foldedNotes = (await local.getMeta<string[]>('collapsedNotes')) ?? [];
     this.collapsedNotes = Object.fromEntries(foldedNotes.map((id) => [id, true as const]));
     this.#collapsedNotesLoaded = true;
+    const hiddenCals = (await local.getMeta<string[]>('hiddenCalendars')) ?? [];
+    this.hiddenCalendars = Object.fromEntries(hiddenCals.map((id) => [id, true as const]));
+    this.#hiddenCalendarsLoaded = true;
     if (session.userId && session.username) {
       this.userNames = { ...this.userNames, [session.userId]: session.username };
     }
@@ -165,14 +197,16 @@ class NotabStore {
   }
 
   async reload() {
-    const [tabs, notes, events] = await Promise.all([
+    const [tabs, notes, events, calendars] = await Promise.all([
       local.getAllTabs(),
       local.getAllNotes(),
       local.getAllEvents(),
+      local.getAllCalendars(),
     ]);
     this.tabs = tabs;
     this.notes = notes;
     this.events = events;
+    this.calendars = calendars;
     this.#byId = new Map(notes.map((n) => [n.id, n]));
     if (this.activeTabId && !this.visibleTabs.some((t) => t.id === this.activeTabId)) {
       this.activeTabId = this.visibleTabs[0]?.id ?? null;
@@ -190,6 +224,7 @@ class NotabStore {
   /** events overlapping [rangeStart, rangeEnd] (both start-of-day epoch ms) */
   eventsInRange(rangeStart: number, rangeEnd: number): CalendarEvent[] {
     return this.visibleEvents
+      .filter((e) => !e.calId || !this.hiddenCalendars[e.calId])
       .filter((e) => e.startDate <= rangeEnd && e.endDate >= rangeStart)
       .sort((a, b) => a.startDate - b.startDate || a.endDate - b.endDate);
   }
@@ -198,11 +233,11 @@ class NotabStore {
     const row: CalendarEvent = { ...ev, updatedAt: now() };
     this.events = upsert(this.events, row);
     await local.putEvent(row);
-    // every event syncs: fane-linked via the tab channel, fane-less via the
-    // per-user personal channel (tabId '')
+    // every event syncs: fane-linked via the tab channel, calendar-linked via
+    // the shared-calendar channel, otherwise the per-user personal channel
     await this.#enqueue({
       type: opType,
-      tabId: row.tabId ?? '',
+      tabId: row.calId ?? row.tabId ?? '',
       entityId: row.id,
       payload: eventToWire(row),
       clientUpdatedAt: row.updatedAt,
@@ -218,6 +253,7 @@ class NotabStore {
     startDate: number;
     endDate: number;
     tabId: string | null;
+    calId?: string | null;
     color?: string | null;
   }): Promise<CalendarEvent | null> {
     const title = data.title.trim();
@@ -225,12 +261,14 @@ class NotabStore {
     const a = startOfDay(data.startDate);
     const b = startOfDay(data.endDate);
     const t = now();
+    const calId = data.calId ?? null;
     const ev: CalendarEvent = {
       id: newId(),
       title,
       startDate: Math.min(a, b),
       endDate: Math.max(a, b),
-      tabId: data.tabId,
+      tabId: calId ? null : data.tabId,
+      calId,
       color: data.color ?? null,
       createdAt: t,
       updatedAt: t,
@@ -244,11 +282,17 @@ class NotabStore {
 
   async updateEvent(
     id: string,
-    patch: Partial<Pick<CalendarEvent, 'title' | 'startDate' | 'endDate' | 'tabId' | 'color'>>,
+    patch: Partial<
+      Pick<CalendarEvent, 'title' | 'startDate' | 'endDate' | 'tabId' | 'calId' | 'color'>
+    >,
   ) {
     const ev = this.getEvent(id);
     if (!ev) return;
     const next = { ...ev, ...patch };
+    // a container change is exclusive: picking a fane clears the calendar and
+    // vice versa
+    if (patch.calId !== undefined) next.tabId = patch.calId ? null : next.tabId;
+    if (patch.tabId !== undefined && patch.tabId) next.calId = null;
     if (patch.startDate != null) next.startDate = startOfDay(patch.startDate);
     if (patch.endDate != null) next.endDate = startOfDay(patch.endDate);
     if (next.endDate < next.startDate) {
@@ -263,6 +307,85 @@ class NotabStore {
     const ev = this.getEvent(id);
     if (!ev) return;
     await this.#commitEvent({ ...ev, deleted: true }, 'deleteEvent');
+  }
+
+  /* ---------------- shared calendars ---------------- */
+
+  visibleCalendars = $derived(
+    this.calendars
+      .filter((c) => !c.deleted)
+      .sort((a, b) => a.name.localeCompare(b.name, 'nb')),
+  );
+
+  getCalendar(id: string): SharedCalendar | undefined {
+    return this.calendars.find((c) => c.id === id);
+  }
+
+  toggleCalendarHidden(id: string) {
+    const next = { ...$state.snapshot(this.hiddenCalendars) } as Record<string, true>;
+    if (next[id]) delete next[id];
+    else next[id] = true;
+    this.hiddenCalendars = next;
+    if (this.#hiddenCalendarsLoaded) void local.setMeta('hiddenCalendars', Object.keys(next));
+  }
+
+  /** true when the caller may add/edit events in this calendar */
+  canEditCalendar(id: string | null | undefined): boolean {
+    if (!id) return true;
+    const c = this.getCalendar(id);
+    if (!c) return false;
+    return !c.joined || c.allowMemberEdit;
+  }
+
+  async #commitCalendar(
+    cal: SharedCalendar,
+    opType: 'upsertCalendar' | 'deleteCalendar' = 'upsertCalendar',
+  ) {
+    const row: SharedCalendar = { ...cal, updatedAt: now() };
+    this.calendars = upsert(this.calendars, row);
+    await local.putCalendar(row);
+    await this.#enqueue({
+      type: opType,
+      tabId: row.id,
+      entityId: row.id,
+      payload: calendarToWire(row),
+      clientUpdatedAt: row.updatedAt,
+      tries: 0,
+      nextAttemptAt: 0,
+    });
+    emit({ kind: 'local-change' });
+  }
+
+  async createCalendar(name: string): Promise<SharedCalendar> {
+    const cal = freshCalendar(name);
+    await this.#commitCalendar(cal);
+    return cal;
+  }
+
+  async renameCalendar(id: string, name: string) {
+    const c = this.getCalendar(id);
+    if (!c || c.joined) return;
+    await this.#commitCalendar({ ...c, name: name.trim() || c.name });
+  }
+
+  async setCalendarColor(id: string, color: string | null) {
+    const c = this.getCalendar(id);
+    if (!c || c.joined) return;
+    await this.#commitCalendar({ ...c, color });
+  }
+
+  async setCalendarAllowEdit(id: string, allowMemberEdit: boolean) {
+    const c = this.getCalendar(id);
+    if (!c || c.joined) return;
+    await this.#commitCalendar({ ...c, allowMemberEdit });
+  }
+
+  async deleteCalendar(id: string) {
+    const c = this.getCalendar(id);
+    if (!c || c.joined) return;
+    await this.#commitCalendar({ ...c, deleted: true }, 'deleteCalendar');
+    await local.hardDeleteCalendarCascade(id);
+    await this.reload();
   }
 
   notesForTab(tabId: string): Note[] {

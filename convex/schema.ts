@@ -62,6 +62,35 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_tab_user', ['tabCid', 'userId']),
 
+  // A shared calendar: a named, colour-coded set of events that layers onto the
+  // calendar view. Shared by code like a fane, but holds no notes and never
+  // appears in the tab strip.
+  calendars: defineTable({
+    cid: v.string(),
+    name: v.string(),
+    color: v.union(v.string(), v.null()),
+    ownerId: v.id('users'),
+    shareCode: v.union(v.string(), v.null()),
+    // true  → anyone with the code may add/edit events
+    // false → members see events read-only; only the owner writes
+    allowMemberEdit: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    deleted: v.boolean(),
+  })
+    .index('by_cid', ['cid'])
+    .index('by_owner', ['ownerId'])
+    .index('by_shareCode', ['shareCode']),
+
+  calendarMembers: defineTable({
+    calCid: v.string(),
+    userId: v.id('users'),
+    joinedAt: v.number(),
+  })
+    .index('by_cal', ['calCid'])
+    .index('by_user', ['userId'])
+    .index('by_cal_user', ['calCid', 'userId']),
+
   notes: defineTable({
     cid: v.string(),
     tabCid: v.string(),
@@ -87,8 +116,10 @@ export default defineSchema({
 
   events: defineTable({
     cid: v.string(),
-    // '' when the event is personal (not tied to a fane); syncs via the owner
+    // exactly one container: tabCid non-empty (fane), calCid set (delt kalender),
+    // else personal (ownerId set). tabCid stays '' for calendar/personal events.
     tabCid: v.string(),
+    calCid: v.optional(v.string()),
     ownerId: v.optional(v.union(v.id('users'), v.null())),
     title: v.string(),
     startDate: v.number(),
@@ -102,5 +133,6 @@ export default defineSchema({
     .index('by_cid', ['cid'])
     .index('by_tab', ['tabCid'])
     .index('by_tab_updated', ['tabCid', 'updatedAt'])
-    .index('by_owner_updated', ['ownerId', 'updatedAt']),
+    .index('by_owner_updated', ['ownerId', 'updatedAt'])
+    .index('by_cal_updated', ['calCid', 'updatedAt']),
 });

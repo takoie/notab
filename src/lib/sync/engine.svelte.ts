@@ -1,4 +1,4 @@
-import type { SyncState, Tab, Note, CalendarEvent, OutboxOp } from '../types';
+import type { SyncState, Tab, Note, CalendarEvent, SharedCalendar, OutboxOp } from '../types';
 import { api } from '../../../convex/_generated/api';
 import { convexConfigured, mutateOnce, queryOnce } from '../convex.svelte';
 import { session } from '../stores/session.svelte';
@@ -13,6 +13,7 @@ import {
   type WireTab,
   type WireNote,
   type WireEvent,
+  type WireCalendar,
 } from './reconcile';
 
 const PULL_INTERVAL_MS = 20_000;
@@ -143,6 +144,9 @@ class SyncEngine {
       if (o.type === 'upsertEvent' || o.type === 'deleteEvent') {
         return { kind: 'event', ...(o.payload as Omit<WireEvent, 'kind'>) };
       }
+      if (o.type === 'upsertCalendar' || o.type === 'deleteCalendar') {
+        return { kind: 'calendar', ...(o.payload as Omit<WireCalendar, 'kind'>) };
+      }
       return { kind: 'note', ...(o.payload as Omit<WireNote, 'kind'>) };
     });
 
@@ -161,6 +165,9 @@ class SyncEngine {
       } else if (op.type.includes('Event')) {
         const ev = await local.getEvent(op.entityId);
         if (ev) await local.putEvent({ ...ev, syncedAt: a.updatedAt });
+      } else if (op.type.includes('Calendar')) {
+        const c = await local.getCalendar(op.entityId);
+        if (c) await local.putCalendar({ ...c, syncedAt: a.updatedAt });
       } else {
         const n = await local.getNote(op.entityId);
         if (n) await local.putNote({ ...n, syncedAt: a.updatedAt });
@@ -270,8 +277,115 @@ class SyncEngine {
       /* server not deployed yet / offline — retry next cycle */
     }
 
+    // shared calendars — one channel per owned/joined calendar
+    try {
+      const cals = (await queryOnce(api.sync.myCalendars, { token: this.token })) as {
+        id: string;
+        updatedAt: number;
+        owned: boolean;
+      }[];
+      const liveCalIds = new Set(cals.map((c) => c.id));
+
+      // a *joined* calendar that fell out of the list = we were removed / it was
+      // deleted. Owned calendars are never auto-dropped here (a local draft may
+      // simply not be pushed yet; real deletion goes through deleteCalendar).
+      for (const c of await local.getAllCalendars()) {
+        if (c.joined && !liveCalIds.has(c.id)) {
+          await local.hardDeleteCalendarCascade(c.id);
+          await local.deleteMeta(`pull.cal.${c.id}`);
+          changed = true;
+        }
+      }
+
+      for (const c of cals) {
+        const sinceKey = `pull.cal.${c.id}`;
+        const since = (await local.getMeta<number>(sinceKey)) ?? 0;
+        const cres = (await queryOnce(api.sync.pullCalendar, {
+          token: this.token,
+          calCid: c.id,
+          since,
+        })) as {
+          calendar: (Versioned & Record<string, unknown>) | null;
+          events: (Versioned & Record<string, unknown>)[];
+          serverNow: number;
+        };
+
+        if (cres.calendar) {
+          const localCal = await local.getCalendar(c.id);
+          const remoteCal = remoteToCalendar(cres.calendar, !c.owned, localCal);
+          const winner = pickWinner<Versioned>(
+            localCal as unknown as Versioned | undefined,
+            remoteCal as unknown as Versioned,
+          );
+          if (winner === (remoteCal as unknown as Versioned)) {
+            if (remoteCal.deleted) {
+              await local.hardDeleteCalendarCascade(c.id);
+            } else {
+              await local.putCalendar(remoteCal);
+            }
+            changed = true;
+          }
+        }
+
+        if (cres.events?.length) {
+          const localCalEvents = await local.getEventsForCalendar(c.id);
+          const merged = mergeBatch<Versioned>(
+            localCalEvents as unknown as Versioned[],
+            cres.events as Versioned[],
+          );
+          if (merged.toWrite.length) {
+            const rows = merged.toWrite.map((r) =>
+              remoteToEvent(r as Versioned & Record<string, unknown>, null, localCalEvents, c.id),
+            );
+            await local.putEvents(rows);
+            changed = true;
+          }
+        }
+
+        await local.setMeta(sinceKey, cres.serverNow);
+      }
+
+      // members can't write a read-only calendar — drop any queued ops for one
+      // so they don't wedge the outbox
+      const readOnly = new Set(
+        (await local.getAllCalendars())
+          .filter((c) => c.joined && !c.allowMemberEdit)
+          .map((c) => c.id),
+      );
+      if (readOnly.size) {
+        for (const op of await local.allOps()) {
+          const calId = (op.payload as { calId?: string }).calId;
+          if (calId && readOnly.has(calId) && op.seq !== undefined) {
+            await local.deleteOp(op.seq);
+          }
+        }
+      }
+    } catch {
+      /* server not deployed yet / offline — retry next cycle */
+    }
+
     if (changed) emit({ kind: 'remote-change' });
   }
+}
+
+function remoteToCalendar(
+  r: Versioned & Record<string, unknown>,
+  joined: boolean,
+  prev?: SharedCalendar,
+): SharedCalendar {
+  return {
+    id: r.id,
+    name: (r.name as string) ?? prev?.name ?? 'Kalender',
+    color: (r.color as string | null) ?? prev?.color ?? null,
+    ownerId: (r.ownerId as string | null) ?? prev?.ownerId ?? null,
+    shareCode: (r.shareCode as string | null) ?? null,
+    allowMemberEdit: (r.allowMemberEdit as boolean | undefined) ?? prev?.allowMemberEdit ?? true,
+    joined,
+    createdAt: prev?.createdAt ?? r.updatedAt,
+    updatedAt: r.updatedAt,
+    deleted: r.deleted,
+    syncedAt: r.updatedAt,
+  };
 }
 
 function remoteToTab(
@@ -300,11 +414,13 @@ function remoteToEvent(
   r: Versioned & Record<string, unknown>,
   tabId: string | null,
   siblings: CalendarEvent[],
+  calId: string | null = null,
 ): CalendarEvent {
   const prev = siblings.find((e) => e.id === r.id);
   return {
     id: r.id,
     tabId,
+    calId,
     title: (r.title as string) ?? prev?.title ?? '',
     startDate: (r.startDate as number) ?? prev?.startDate ?? r.updatedAt,
     endDate: (r.endDate as number) ?? prev?.endDate ?? r.updatedAt,

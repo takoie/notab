@@ -1,7 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { importance, sortMode } from './schema';
-import { requireSession, requireTabAccess } from './security';
+import { requireSession, requireTabAccess, requireCalendarAccess } from './security';
 
 const tabOp = v.object({
   kind: v.literal('tab'),
@@ -38,10 +38,23 @@ const eventOp = v.object({
   kind: v.literal('event'),
   id: v.string(),
   tabId: v.string(),
+  // set when the event belongs to a shared calendar; mutually exclusive with a
+  // non-empty tabId. absent/'' → personal (owner channel).
+  calId: v.optional(v.string()),
   title: v.string(),
   startDate: v.number(),
   endDate: v.number(),
   color: v.union(v.string(), v.null()),
+  deleted: v.boolean(),
+  clientUpdatedAt: v.number(),
+});
+
+const calendarOp = v.object({
+  kind: v.literal('calendar'),
+  id: v.string(),
+  name: v.string(),
+  color: v.union(v.string(), v.null()),
+  allowMemberEdit: v.boolean(),
   deleted: v.boolean(),
   clientUpdatedAt: v.number(),
 });
@@ -53,7 +66,7 @@ const eventOp = v.object({
 export const pushOps = mutation({
   args: {
     token: v.string(),
-    ops: v.array(v.union(tabOp, noteOp, eventOp)),
+    ops: v.array(v.union(tabOp, noteOp, eventOp, calendarOp)),
   },
   handler: async (ctx, args) => {
     const userId = await requireSession(ctx, args.token);
@@ -150,10 +163,49 @@ export const pushOps = mutation({
           updatedAt: now,
         });
         applied.push({ id: op.id, updatedAt: now, skipped: false });
+      } else if (op.kind === 'calendar') {
+        // only the owner may create or mutate the calendar record itself
+        const existing = await ctx.db
+          .query('calendars')
+          .withIndex('by_cid', (q) => q.eq('cid', op.id))
+          .unique();
+
+        if (!existing) {
+          const now = Math.max(op.clientUpdatedAt, Date.now());
+          await ctx.db.insert('calendars', {
+            cid: op.id,
+            name: op.name,
+            color: op.color,
+            ownerId: userId,
+            shareCode: null,
+            allowMemberEdit: op.allowMemberEdit,
+            createdAt: now,
+            updatedAt: now,
+            deleted: op.deleted,
+          });
+          applied.push({ id: op.id, updatedAt: now, skipped: false });
+          continue;
+        }
+
+        if (existing.ownerId !== userId || existing.updatedAt > op.clientUpdatedAt) {
+          applied.push({ id: op.id, updatedAt: existing.updatedAt, skipped: true });
+          continue;
+        }
+        const now = Math.max(op.clientUpdatedAt, Date.now());
+        await ctx.db.patch(existing._id, {
+          name: op.name,
+          color: op.color,
+          allowMemberEdit: op.allowMemberEdit,
+          deleted: op.deleted,
+          updatedAt: now,
+        });
+        applied.push({ id: op.id, updatedAt: now, skipped: false });
       } else {
-        // event op — personal (no tab) events sync via the owner
-        const personal = !op.tabId;
-        if (!personal) await requireTabAccess(ctx, userId, op.tabId);
+        // event op — one container: a fane, a shared calendar, or personal
+        const inCalendar = !!op.calId;
+        const personal = !op.tabId && !inCalendar;
+        if (op.tabId) await requireTabAccess(ctx, userId, op.tabId);
+        if (inCalendar) await requireCalendarAccess(ctx, userId, op.calId!, { write: true });
 
         const existing = await ctx.db
           .query('events')
@@ -165,6 +217,7 @@ export const pushOps = mutation({
           await ctx.db.insert('events', {
             cid: op.id,
             tabCid: op.tabId,
+            calCid: inCalendar ? op.calId : undefined,
             ownerId: personal ? userId : null,
             title: op.title,
             startDate: op.startDate,
@@ -304,6 +357,99 @@ export const pullPersonalEvents = query({
       events: events.map((e) => ({
         id: e.cid,
         tabId: '',
+        title: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        color: e.color,
+        createdBy: e.createdBy ?? null,
+        deleted: e.deleted,
+        updatedAt: e.updatedAt,
+      })),
+      serverNow: Date.now(),
+    };
+  },
+});
+
+/** Every shared-calendar cid the caller owns or has joined (discovery). */
+export const myCalendars = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await requireSession(ctx, args.token);
+
+    const owned = await ctx.db
+      .query('calendars')
+      .withIndex('by_owner', (q) => q.eq('ownerId', userId))
+      .collect();
+
+    const memberships = await ctx.db
+      .query('calendarMembers')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .collect();
+
+    const joined = [];
+    for (const m of memberships) {
+      const c = await ctx.db
+        .query('calendars')
+        .withIndex('by_cid', (q) => q.eq('cid', m.calCid))
+        .unique();
+      if (c) joined.push(c);
+    }
+
+    const seen = new Set<string>();
+    const out: { id: string; updatedAt: number; owned: boolean }[] = [];
+    for (const c of owned) {
+      if (seen.has(c.cid)) continue;
+      seen.add(c.cid);
+      out.push({ id: c.cid, updatedAt: c.updatedAt, owned: true });
+    }
+    for (const c of joined) {
+      if (seen.has(c.cid)) continue;
+      seen.add(c.cid);
+      out.push({ id: c.cid, updatedAt: c.updatedAt, owned: false });
+    }
+    return out;
+  },
+});
+
+/** Delta pull for a single shared calendar: record + events changed after `since`. */
+export const pullCalendar = query({
+  args: { token: v.string(), calCid: v.string(), since: v.number() },
+  handler: async (ctx, args) => {
+    const userId = await requireSession(ctx, args.token);
+    const { isOwner } = await requireCalendarAccess(ctx, userId, args.calCid);
+
+    const calDoc = await ctx.db
+      .query('calendars')
+      .withIndex('by_cid', (q) => q.eq('cid', args.calCid))
+      .unique();
+
+    const events = await ctx.db
+      .query('events')
+      .withIndex('by_cal_updated', (q) =>
+        q.eq('calCid', args.calCid).gt('updatedAt', args.since),
+      )
+      .collect();
+
+    const calendar =
+      calDoc && calDoc.updatedAt > args.since
+        ? {
+            id: calDoc.cid,
+            name: calDoc.name,
+            color: calDoc.color,
+            allowMemberEdit: calDoc.allowMemberEdit,
+            owned: isOwner,
+            shareCode: isOwner ? calDoc.shareCode : null,
+            deleted: calDoc.deleted,
+            updatedAt: calDoc.updatedAt,
+          }
+        : null;
+
+    return {
+      calendar,
+      events: events.map((e) => ({
+        id: e.cid,
+        tabId: '',
+        calId: args.calCid,
         title: e.title,
         startDate: e.startDate,
         endDate: e.endDate,

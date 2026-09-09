@@ -66,12 +66,39 @@ export interface CalendarEvent {
   startDate: number;
   /** start-of-day epoch ms, inclusive (== startDate for a single-day event) */
   endDate: number;
-  /** tab this event syncs with, or null for a local-only event */
+  /**
+   * The event's container. Exactly one of `tabId` / `calId` is set; when both
+   * are null the event is personal (syncs via the owner channel).
+   */
   tabId: string | null;
+  /** shared-calendar this event belongs to, or null */
+  calId: string | null;
   color: string | null;
   createdAt: number;
   updatedAt: number;
   createdBy: string | null;
+  deleted: boolean;
+  syncedAt: number;
+}
+
+/**
+ * A shared calendar: a named, colour-coded set of events shared by code, layered
+ * onto the calendar view. Never appears in the tab strip; holds no notes.
+ */
+export interface SharedCalendar {
+  id: string;
+  name: string;
+  color: string | null;
+  /** null = local-only draft; set once synced/joined */
+  ownerId: string | null;
+  /** present on the owner's copy once a share code is active */
+  shareCode: string | null;
+  /** true → any member may edit events; false → members are read-only */
+  allowMemberEdit: boolean;
+  /** true when this device joined someone else's calendar (not the owner) */
+  joined: boolean;
+  createdAt: number;
+  updatedAt: number;
   deleted: boolean;
   syncedAt: number;
 }
@@ -82,7 +109,9 @@ export type OutboxOpType =
   | 'upsertNote'
   | 'deleteNote'
   | 'upsertEvent'
-  | 'deleteEvent';
+  | 'deleteEvent'
+  | 'upsertCalendar'
+  | 'deleteCalendar';
 
 export interface OutboxOp {
   /** autoincrement key */

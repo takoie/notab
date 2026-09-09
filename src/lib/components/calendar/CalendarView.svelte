@@ -7,6 +7,7 @@
   import NoteRow from '../NoteRow.svelte';
   import CalendarGrid from './CalendarGrid.svelte';
   import EventDialog from './EventDialog.svelte';
+  import CalendarsPanel from './CalendarsPanel.svelte';
   import { calendarDrag } from './drag.svelte';
 
   const start = new Date();
@@ -145,13 +146,16 @@
       I dag
     </button>
 
-    <button
-      type="button"
-      class="ml-auto flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-accent-ink transition-[filter] hover:brightness-105"
-      onclick={() => newEvent()}
-    >
-      <CalendarPlus size={14} /> Hendelse
-    </button>
+    <div class="ml-auto flex items-center gap-1.5">
+      <CalendarsPanel />
+      <button
+        type="button"
+        class="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-accent-ink transition-[filter] hover:brightness-105"
+        onclick={() => newEvent()}
+      >
+        <CalendarPlus size={14} /> Hendelse
+      </button>
+    </div>
   </div>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->

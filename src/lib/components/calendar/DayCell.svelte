@@ -3,6 +3,11 @@
   import type { Note, CalendarEvent } from '$lib/types';
   import { cn } from '$lib/cn';
   import { tint } from '$lib/colors';
+  import { notab } from '$lib/stores/notab.svelte';
+
+  /** an event's own colour, else the colour of the shared calendar it's in */
+  const eventColor = (ev: CalendarEvent) =>
+    ev.color ?? (ev.calId ? notab.getCalendar(ev.calId)?.color ?? null : null);
   import Popover from '../ui/Popover.svelte';
   import MenuItem from '../ui/MenuItem.svelte';
   import EventChip from './EventChip.svelte';
@@ -93,15 +98,16 @@
       {#each dayEvents as ev (ev.id)}
         {@const isStart = Math.abs(ev.startDate - ts) < DAY / 2}
         {@const isEnd = Math.abs(ev.endDate - ts) < DAY / 2}
+        {@const col = eventColor(ev)}
         <button
           type="button"
           class={cn(
             '-mx-1 flex h-[18px] items-center truncate px-1.5 text-left text-[11px] font-medium leading-none transition-[filter] hover:brightness-95',
             isStart && 'ml-0 rounded-l',
             isEnd && 'mr-0 rounded-r',
-            ev.color ? 'text-ink' : 'bg-accent-soft text-accent',
+            col ? 'text-ink' : 'bg-accent-soft text-accent',
           )}
-          style:background-color={ev.color ? tint(ev.color, 22) : undefined}
+          style:background-color={col ? tint(col, 22) : undefined}
           title={ev.title}
           onclick={() => oneditevent?.(ev.id)}
         >
